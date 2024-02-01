@@ -19,10 +19,21 @@ export const mergeRequest = (baseObj: any, objToSync: any): any => {
 };
 
 export const fetchRequest = async (url: string, request: any) => {
-  const response = await fetch(url, request);
-  const data = await response.json();
-  return data;
+  try {
+    const response = await fetch(url, request);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching data:', error.message);
+    throw error;
+  }
 };
+
 
 export const postRequest = async (
   apiUrl: string,
