@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CHA_TABLES = exports.SUPERSET = void 0;
+exports.DATA_FILE_PATH = exports.CHA_TABLES = exports.SUPERSET = void 0;
 var dotenv = __importStar(require("dotenv"));
 dotenv.config();
 exports.SUPERSET = {
@@ -34,6 +34,7 @@ exports.SUPERSET = {
     trustSelfSigned: true,
 };
 exports.CHA_TABLES = getEnvironmentVariable('CHA_TABLES', '[]');
+exports.DATA_FILE_PATH = getEnvironmentVariable('DATA_FILE_PATH', 'src/template.csv');
 function getEnvironmentVariable(env, def) {
     if (process.env.NODE_ENV === 'test') {
         return def;

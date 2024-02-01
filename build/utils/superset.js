@@ -47,13 +47,15 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.stringifyRequest = exports.getPermissionsByRoleID = exports.postRequest = exports.fetchRequest = exports.mergeRequest = exports.initRequest = exports.getFullUrl = void 0;
+exports.stringifyRequest = exports.getRequests = exports.getRoles = exports.getPermissionsByRoleID = exports.postRequest = exports.fetchRequest = exports.mergeRequest = exports.initRequest = exports.getFullUrl = void 0;
 var fetch = require('node-fetch');
-var getFullUrl = function (apiUrl, endpoint) { return "".concat(apiUrl).concat(endpoint); };
+var getFullUrl = function (apiUrl, endpoint) {
+    return "".concat(apiUrl).concat(endpoint);
+};
 exports.getFullUrl = getFullUrl;
 var initRequest = function (method, authorizationHeaders) { return ({
     method: method,
-    headers: authorizationHeaders
+    headers: authorizationHeaders,
 }); };
 exports.initRequest = initRequest;
 var mergeRequest = function (baseObj, objToSync) {
@@ -104,5 +106,34 @@ var getPermissionsByRoleID = function (apiUrl, authorizationHeaders, roleID) { r
     });
 }); };
 exports.getPermissionsByRoleID = getPermissionsByRoleID;
+var getRoles = function (apiUrl, authorizationHeaders) { return __awaiter(void 0, void 0, void 0, function () {
+    var method, endpoint, url, request;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                method = 'get';
+                endpoint = "/security/roles/";
+                url = (0, exports.getFullUrl)(apiUrl, endpoint);
+                request = (0, exports.initRequest)(method, authorizationHeaders);
+                return [4 /*yield*/, (0, exports.fetchRequest)(url, request)];
+            case 1: return [2 /*return*/, _a.sent()];
+        }
+    });
+}); };
+exports.getRoles = getRoles;
+var getRequests = function (apiUrl, authorizationHeaders, endpoint) { return __awaiter(void 0, void 0, void 0, function () {
+    var method, url, request;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                method = 'get';
+                url = (0, exports.getFullUrl)(apiUrl, endpoint);
+                request = (0, exports.initRequest)(method, authorizationHeaders);
+                return [4 /*yield*/, (0, exports.fetchRequest)(url, request)];
+            case 1: return [2 /*return*/, _a.sent()];
+        }
+    });
+}); };
+exports.getRequests = getRequests;
 var stringifyRequest = function (request) { return JSON.stringify(request); };
 exports.stringifyRequest = stringifyRequest;

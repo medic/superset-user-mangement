@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getFormattedHeaders = exports.getCookie = exports.getCSRFToken = exports.getBearerToken = void 0;
+exports.getFormattedHeaders = exports.getCSRFTokenAndCookie = exports.getBearerToken = void 0;
 var fetch = require('node-fetch');
 var getBearerToken = function (apiUrl, body) { return __awaiter(void 0, void 0, void 0, function () {
     var response, data;
@@ -45,72 +45,44 @@ var getBearerToken = function (apiUrl, body) { return __awaiter(void 0, void 0, 
             case 0: return [4 /*yield*/, fetch("".concat(apiUrl, "/security/login"), {
                     method: 'post',
                     body: JSON.stringify(body),
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json' },
                 })];
             case 1:
                 response = _a.sent();
                 return [4 /*yield*/, response.json()];
             case 2:
-                data = _a.sent();
+                data = (_a.sent());
                 return [2 /*return*/, data.access_token];
         }
     });
 }); };
 exports.getBearerToken = getBearerToken;
-var getCSRFToken = function (apiUrl, bearerToken) { return __awaiter(void 0, void 0, void 0, function () {
+var getCSRFTokenAndCookie = function (apiUrl, bearerToken) { return __awaiter(void 0, void 0, void 0, function () {
     var headers, response, data;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 headers = {
-                    Authorization: "Bearer ".concat(bearerToken)
+                    Authorization: "Bearer ".concat(bearerToken),
                 };
                 return [4 /*yield*/, fetch("".concat(apiUrl, "/security/csrf_token/"), {
                         method: 'get',
-                        headers: headers
+                        headers: headers,
                     })];
             case 1:
                 response = _a.sent();
                 return [4 /*yield*/, response.json()];
             case 2:
-                data = _a.sent();
-                ;
-                return [2 /*return*/, data.result];
+                data = (_a.sent());
+                return [2 /*return*/, [data.result, response.headers.get('set-cookie')]];
         }
     });
 }); };
-exports.getCSRFToken = getCSRFToken;
-var getCookie = function (apiUrl, bearerToken, csrfToken) { return __awaiter(void 0, void 0, void 0, function () {
-    var headers, response, data, jsonData, base64Data;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                headers = {
-                    Authorization: "Bearer ".concat(bearerToken),
-                    'X-CSRFToken': csrfToken,
-                };
-                return [4 /*yield*/, fetch("".concat(apiUrl, "/security/me/roles"), {
-                        method: 'get',
-                        headers: headers
-                    })];
-            case 1:
-                response = _a.sent();
-                return [4 /*yield*/, response.json()];
-            case 2:
-                data = _a.sent();
-                console.log(data);
-                jsonData = JSON.stringify({ userId: data.result.userId, role: Object.keys(data.result.roles).toString() });
-                console.log(jsonData);
-                base64Data = Buffer.from(jsonData).toString('base64');
-                return [2 /*return*/, "session=".concat(base64Data)];
-        }
-    });
-}); };
-exports.getCookie = getCookie;
+exports.getCSRFTokenAndCookie = getCSRFTokenAndCookie;
 var getFormattedHeaders = function (bearerToken, csrfToken, cookie) { return ({
-    'Authorization': "Bearer ".concat(bearerToken),
+    Authorization: "Bearer ".concat(bearerToken),
     'Content-Type': 'application/json',
     'X-CSRFToken': csrfToken,
-    'Cookie': cookie
+    Cookie: cookie,
 }); };
 exports.getFormattedHeaders = getFormattedHeaders;

@@ -10,7 +10,7 @@ var generateUser = function (rawObj, rolesArray) {
         email: email,
         username: username,
         password: password,
-        roles: rolesArray
+        roles: rolesArray,
     };
 };
 exports.generateUser = generateUser;

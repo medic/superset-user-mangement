@@ -43,46 +43,109 @@ var fs_1 = __importDefault(require("fs"));
 var csv_parser_1 = __importDefault(require("csv-parser"));
 var config_1 = require("./config/config");
 var auth_1 = require("./utils/auth");
+var role_1 = require("./utils/role");
+var rowlevelsecurity_1 = require("./utils/rowlevelsecurity");
+var user_1 = require("./utils/user");
+var superset_1 = require("./utils/superset");
 var url_1 = require("./utils/url");
-var DASHBOARD_VIEWER_ROLE_ID = 9;
+var DASHBOARD_VIEWER_ROLE_ID = 7;
 var API_URL = (0, url_1.resolveUrl)(config_1.SUPERSET.baseURL, config_1.SUPERSET.apiPath);
 var readAndParse = function (fileName) { return __awaiter(void 0, void 0, void 0, function () {
-    var BEARER_TOKEN, CSRF_TOKEN, COOKIE;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0: return [4 /*yield*/, (0, auth_1.getBearerToken)(API_URL, { username: config_1.SUPERSET.username, password: config_1.SUPERSET.password, provider: 'db'
+    var BEARER_TOKEN, _a, CSRF_TOKEN, COOKIE, AUTHORIZATION_HEADERS, dashboardViewerPermissions, PERMISSIONS, results, rolesAvailableOnSuperset, rowLevelFromSuperset;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0: return [4 /*yield*/, (0, auth_1.getBearerToken)(API_URL, {
+                    username: config_1.SUPERSET.username,
+                    password: config_1.SUPERSET.password,
+                    provider: 'db',
                 })];
             case 1:
-                BEARER_TOKEN = _a.sent();
-                return [4 /*yield*/, (0, auth_1.getCSRFToken)(API_URL, BEARER_TOKEN)];
+                BEARER_TOKEN = _b.sent();
+                return [4 /*yield*/, (0, auth_1.getCSRFTokenAndCookie)(API_URL, BEARER_TOKEN)];
             case 2:
-                CSRF_TOKEN = _a.sent();
-                return [4 /*yield*/, (0, auth_1.getCookie)(API_URL, BEARER_TOKEN, CSRF_TOKEN)];
+                _a = _b.sent(), CSRF_TOKEN = _a[0], COOKIE = _a[1];
+                AUTHORIZATION_HEADERS = (0, auth_1.getFormattedHeaders)(BEARER_TOKEN, CSRF_TOKEN, COOKIE);
+                return [4 /*yield*/, (0, superset_1.getPermissionsByRoleID)(API_URL, AUTHORIZATION_HEADERS, DASHBOARD_VIEWER_ROLE_ID)];
             case 3:
-                COOKIE = _a.sent();
-                console.log(COOKIE);
-                // const AUTHORIZATION_HEADERS = getFormattedHeaders(BEARER_TOKEN, CSRF_TOKEN, COOKIE);
-                // const dashboardViewerPermissions = await getPermissionsByRoleID(
-                //   API_URL,
-                //   AUTHORIZATION_HEADERS,
-                //   DASHBOARD_VIEWER_ROLE_ID
-                // );
-                // const PERMISSIONS = dashboardViewerPermissions.result.map((item: { id: number; }) => item.id);
+                dashboardViewerPermissions = _b.sent();
+                PERMISSIONS = dashboardViewerPermissions.result.map(function (item) { return item.id; });
+                results = [];
+                return [4 /*yield*/, (0, superset_1.getRoles)(API_URL, AUTHORIZATION_HEADERS)];
+            case 4:
+                rolesAvailableOnSuperset = (_b.sent()).result;
+                return [4 /*yield*/, (0, superset_1.getRequests)(API_URL, AUTHORIZATION_HEADERS, "/rowlevelsecurity/")];
+            case 5:
+                rowLevelFromSuperset = (_b.sent()).result;
                 fs_1.default.createReadStream(fileName, 'utf-8')
                     .on('error', function () {
                     // handle error
                 })
                     .pipe((0, csv_parser_1.default)())
-                    .on('data', function (row) { return __awaiter(void 0, void 0, void 0, function () {
+                    .on('data', function (data) { return results.push(data); })
+                    .on('end', function () { return __awaiter(void 0, void 0, void 0, function () {
+                    var _loop_1, _i, results_1, user;
                     return __generator(this, function (_a) {
-                        return [2 /*return*/];
+                        switch (_a.label) {
+                            case 0:
+                                _loop_1 = function (user) {
+                                    var roleResult, role, rolePermissions, roleExists, createdRole, rowLevelSecurity, generatedUser, doesRowLevelExist, response;
+                                    return __generator(this, function (_b) {
+                                        switch (_b.label) {
+                                            case 0:
+                                                roleResult = void 0;
+                                                role = (0, role_1.generateRole)(user.role, user.place);
+                                                rolePermissions = (0, role_1.generatePermissions)(PERMISSIONS);
+                                                roleExists = rolesAvailableOnSuperset.find(function (ssrole) { return ssrole.name === role.name; });
+                                                if (!(roleExists !== undefined)) return [3 /*break*/, 1];
+                                                roleResult = roleExists;
+                                                return [3 /*break*/, 3];
+                                            case 1: return [4 /*yield*/, (0, superset_1.postRequest)(API_URL, AUTHORIZATION_HEADERS, "/security/roles/", (0, superset_1.stringifyRequest)(role))];
+                                            case 2:
+                                                roleResult = _b.sent();
+                                                rolesAvailableOnSuperset.push({
+                                                    id: roleResult.id,
+                                                    name: roleResult.result.name,
+                                                });
+                                                _b.label = 3;
+                                            case 3:
+                                                createdRole = roleResult;
+                                                rowLevelSecurity = (0, rowlevelsecurity_1.generateRowLevelSecurity)([createdRole.id], user.group, user.place, config_1.CHA_TABLES, user.role);
+                                                return [4 /*yield*/, (0, superset_1.postRequest)(API_URL, AUTHORIZATION_HEADERS, "/security/roles/".concat(createdRole.id, "/permissions"), (0, superset_1.stringifyRequest)(rolePermissions))];
+                                            case 4:
+                                                _b.sent();
+                                                generatedUser = (0, user_1.generateUser)(user, [createdRole.id]);
+                                                return [4 /*yield*/, (0, superset_1.postRequest)(API_URL, AUTHORIZATION_HEADERS, "/security/users/", (0, superset_1.stringifyRequest)(generatedUser))];
+                                            case 5:
+                                                _b.sent();
+                                                doesRowLevelExist = rowLevelFromSuperset.some(function (level) { return level.name === rowLevelSecurity.name; });
+                                                if (!!doesRowLevelExist) return [3 /*break*/, 7];
+                                                return [4 /*yield*/, (0, superset_1.postRequest)(API_URL, AUTHORIZATION_HEADERS, "/rowlevelsecurity/", (0, superset_1.stringifyRequest)(rowLevelSecurity))];
+                                            case 6:
+                                                response = _b.sent();
+                                                rowLevelFromSuperset.push(response.result);
+                                                _b.label = 7;
+                                            case 7: return [2 /*return*/];
+                                        }
+                                    });
+                                };
+                                _i = 0, results_1 = results;
+                                _a.label = 1;
+                            case 1:
+                                if (!(_i < results_1.length)) return [3 /*break*/, 4];
+                                user = results_1[_i];
+                                return [5 /*yield**/, _loop_1(user)];
+                            case 2:
+                                _a.sent();
+                                _a.label = 3;
+                            case 3:
+                                _i++;
+                                return [3 /*break*/, 1];
+                            case 4: return [2 /*return*/];
+                        }
                     });
-                }); })
-                    .on('end', function () {
-                    // handle end of CSV
-                });
+                }); });
                 return [2 /*return*/];
         }
     });
 }); };
-readAndParse('src/template.csv');
+readAndParse(config_1.DATA_FILE_PATH);
