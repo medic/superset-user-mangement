@@ -1,12 +1,27 @@
 const fetch = require('node-fetch');
 
-export const getBearerToken = async (apiUrl: string, body: any) => {
+interface LoginRequest {
+  username: string;
+  password: string;
+  provider: string
+}
+
+interface LoginResponse {
+  access_token: string;
+}
+
+
+
+export const getBearerToken = async (apiUrl: string, body: LoginRequest) => {
   const response = await fetch(`${apiUrl}/security/login`, {
     method: 'post',
     body: JSON.stringify(body),
     headers: {'Content-Type': 'application/json'}
   });
-  const data = await response.json() as { access_token: string };
+
+  console.log(JSON.stringify(body))
+  
+  const data = await response.json() as LoginResponse;
   return data.access_token;
 };
 

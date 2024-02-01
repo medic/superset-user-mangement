@@ -1,5 +1,6 @@
 import fs from 'fs';
 import csv from 'csv-parser';
+
 import {
   SUPERSET,
   CHA_TABLES,
@@ -29,7 +30,7 @@ import {
 
 import { resolveUrl } from './utils/url';
 
-const DASHBOARD_VIEWER_ROLE_ID = 9;
+const DASHBOARD_VIEWER_ROLE_ID = 4; // TODO replace this with the correct role ID
 const API_URL = resolveUrl(SUPERSET.baseURL, SUPERSET.apiPath);
 
 const readAndParse = async (fileName: string) => {
@@ -37,6 +38,8 @@ const readAndParse = async (fileName: string) => {
       API_URL,
       {username: SUPERSET.username, password: SUPERSET.password, provider: 'db'
     });
+
+
     const CSRF_TOKEN = await getCSRFToken(API_URL, BEARER_TOKEN);
     const COOKIE = await getCookie(); // To-Do
     const AUTHORIZATION_HEADERS = getFormattedHeaders(BEARER_TOKEN, CSRF_TOKEN, COOKIE);
