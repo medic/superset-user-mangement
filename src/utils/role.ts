@@ -30,5 +30,11 @@ export const getRoles = async (apiUrl: string, headers: any): Promise<SupersetRo
 
   console.log(`Found ${roleList.count} roles`)
 
+  roleList.result.push({ id: 7, name: "601751_kaloleni_kilifi"});
   return roleList.result;
+}
+
+export function filterRoles(array: SupersetRole[], searchString: string): SupersetRole[] {
+  const regexPattern = new RegExp(`^${searchString}_`);
+  return array.filter(supersetRole => regexPattern.test(supersetRole.name));
 }

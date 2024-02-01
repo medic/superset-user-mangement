@@ -63,7 +63,7 @@ export const getCSRFToken = async (bearerToken: string): Promise<string> => {
   return data.result;
 };
 
-export const getFormattedHeaders = (bearerToken: string, csrfToken: string, cookie: string) => ({
+export const getFormattedHeaders  = (bearerToken: string, csrfToken: string, cookie: string) => ({
   'Authorization': `Bearer ${bearerToken}`,
   'Content-Type': 'application/json',
   'X-CSRFToken': csrfToken,
