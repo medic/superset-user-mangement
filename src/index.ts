@@ -1,13 +1,7 @@
-import fs from 'fs';
-import csv from 'csv-parser';
 
-import { SUPERSET, CHA_TABLES, DATA_FILE_PATH } from './config/config';
-import { getBearerToken, getCSRFToken, getCookie, getFormattedHeaders } from './utils/auth';
-import { generateRole, generatePermissions, getDashboardViewerPermissions, getRoles } from './utils/role';
-import { generateRowLevelSecurity } from './utils/rowlevelsecurity';
-import { generateUser } from './utils/user';
-
-import { postRequest, stringifyRequest } from './utils/superset';
+import { SUPERSET, DATA_FILE_PATH } from './config/config';
+import { getTokens, getCSRFToken, getFormattedHeaders } from './utils/auth';
+import { getRoles } from './utils/role';
 
 import { resolveUrl } from './utils/url';
 
@@ -15,16 +9,15 @@ const DASHBOARD_VIEWER_ROLE_ID = 4; // TODO replace this with the correct role I
 const API_URL = resolveUrl(SUPERSET.baseURL, SUPERSET.apiPath);
 
 const readAndParse = async (fileName: string) => {
-  const bearerToken = await getBearerToken();
-  const csrfToken = await getCSRFToken(bearerToken);
-  const cookie = await getCookie(); // To-Do
-  const headers = getFormattedHeaders(bearerToken, csrfToken, cookie);
+  const tokens = await getTokens();
+  const csrfToken = await getCSRFToken(tokens.bearerToken);
+  const headers = getFormattedHeaders(tokens.bearerToken, csrfToken, tokens.cookie);
 
   const roles = await getRoles(API_URL, headers);
   console.log(roles);
 
   // const dashboardViewerPermissions = getDashboardViewerPermissions(API_URL, headers, DASHBOARD_VIEWER_ROLE_ID);
-
+ 
   // fs.createReadStream(fileName, 'utf-8')
   //   .on('error', () => {
   //     // handle error

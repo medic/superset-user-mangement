@@ -1,6 +1,5 @@
 import { SUPERSET } from '../config/config';
-
-import fetch from 'node-fetch';
+import fetch, { Headers, RequestInit } from 'node-fetch';
 import { resolveUrl } from './url';
 
 const API_URL = resolveUrl(SUPERSET.baseURL, SUPERSET.apiPath);
@@ -8,45 +7,65 @@ const API_URL = resolveUrl(SUPERSET.baseURL, SUPERSET.apiPath);
 interface LoginRequest {
   username: string;
   password: string;
-  provider: string
+  provider: string;
 }
 
 interface LoginResponse {
   access_token: string;
 }
 
-export const getBearerToken = async () => {
+interface CSRFResponse {
+  result: string;
+}
+
+// Helper function to handle fetch requests and return both json and headers
+async function fetchFromAPI(endpoint: string, options: RequestInit): Promise<{ json: any, headers: Headers }> {
+  try {
+    const response = await fetch(endpoint, options);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const json = await response.json();
+    return { json, headers: response.headers };
+  } catch (error) {
+    console.error('Fetching error:', error);
+    throw error;
+  }
+}
+
+export const getTokens = async (): Promise<{ bearerToken: string, cookie: string }> => {
   const body: LoginRequest = {
     username: SUPERSET.username,
     password: SUPERSET.password,
     provider: "db"
   };
 
-  const response = await fetch(`${API_URL}/security/login`, {
-    method: 'post',
+  const { json, headers }: { json: LoginResponse, headers: Headers } = await fetchFromAPI(`${API_URL}/security/login`, {
+    method: 'POST',
     body: JSON.stringify(body),
     headers: { 'Content-Type': 'application/json' }
   });
 
-  const data = await response.json() as LoginResponse;
-  return data.access_token;
+  const cookie = headers.get('Set-Cookie') || '';
+  return { bearerToken: json.access_token, cookie };
 };
 
-export const getCSRFToken = async (bearerToken: string) => {
+export const getCSRFToken = async (bearerToken: string): Promise<string> => {
   const headers = {
-    Authorization: `Bearer ${bearerToken}`
+    'Authorization': `Bearer ${bearerToken}`
   };
-  const response = await fetch(`${API_URL}/security/csrf_token/`, {
-    method: 'get',
-    headers: headers
-  });
-  const data = await response.json() as { result: string };
-  return data.result;
-}
 
-// To-Do: Implement this to get cookie - required for row-level-security to work
-export const getCookie = async () => {
-  return 'session=';
+  const data: CSRFResponse = await fetchFromAPI(`${API_URL}/security/csrf_token/`, {
+    method: 'GET',
+    headers: headers
+  }).then(res => res.json);
+
+  return data.result;
+};
+
+export const getCookie = async (): Promise<string> => {
+  const { cookie } = await getTokens();
+  return cookie;
 };
 
 export const getFormattedHeaders = (bearerToken: string, csrfToken: string, cookie: string) => ({
