@@ -2,7 +2,7 @@ import { SUPERSET } from '../config/config';
 import fetch, { Headers, RequestInit } from 'node-fetch';
 import { resolveUrl } from './url';
 
-const API_URL = resolveUrl(SUPERSET.baseURL, SUPERSET.apiPath);
+export const API_URL = resolveUrl(SUPERSET.baseURL, SUPERSET.apiPath);
 
 interface LoginRequest {
   username: string;
@@ -33,7 +33,7 @@ async function fetchFromAPI(endpoint: string, options: RequestInit): Promise<{ j
   }
 }
 
-export const getTokens = async (): Promise<{ bearerToken: string, cookie: string }> => {
+export const loginResult = async (): Promise<{ bearerToken: string, cookie: string }> => {
   const body: LoginRequest = {
     username: SUPERSET.username,
     password: SUPERSET.password,

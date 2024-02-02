@@ -2,24 +2,22 @@
 import fs from 'fs';
 import csv from 'csv-parser';
 
-import { SUPERSET, DATA_FILE_PATH } from './config/config';
-import { getTokens, getCSRFToken, getFormattedHeaders } from './utils/auth';
-import { parseUserCSV } from './utils/csvParser';
+import { DATA_FILE_PATH } from './config/config';
+import { loginResult, getCSRFToken, getFormattedHeaders } from './utils/auth';
 import { filterRoles, getRoles } from './utils/role';
 
-import { resolveUrl } from './utils/url';
 import { CSVUser, User, createUserAccounts, generateUser } from './utils/user';
 
-const DASHBOARD_VIEWER_ROLE_ID = 4; // TODO replace this with the correct role ID
-const API_URL = resolveUrl(SUPERSET.baseURL, SUPERSET.apiPath);
+// const DASHBOARD_VIEWER_ROLE_ID = 4; // TODO replace this with the correct role ID
+// const API_URL = resolveUrl(SUPERSET.baseURL, SUPERSET.apiPath);
 
 const readAndParse = async (fileName: string) => {
-  const tokens = await getTokens();
+  const tokens = await loginResult();
   const csrfToken = await getCSRFToken(tokens.bearerToken);
 
   const headers = getFormattedHeaders(tokens.bearerToken, csrfToken, tokens.cookie);
 
-  const roles = await getRoles(API_URL, headers);
+  const roles = await getRoles(headers);
   console.log(roles);
 
   let users: CSVUser[] = [];
@@ -44,11 +42,12 @@ const readAndParse = async (fileName: string) => {
         const role = filterRoles(roles, user.place);
 
         if(role.length === 0) {
-          console.log(`No role found for ${user.place}`);
+          console.log(`No role found for ${user.first_name} ${user.last_name} in ${user.place}`);
           return;
         }
-
-        supersetUsers.push(generateUser(user, role.map(r => r.name)));
+        
+        const su = generateUser(user, role.map(r => r.id))
+        supersetUsers.push(su);
       })
 
       console.log(supersetUsers);
@@ -95,6 +94,6 @@ const readAndParse = async (fileName: string) => {
 
 
 
-// readAndParse(DATA_FILE_PATH);
+readAndParse(DATA_FILE_PATH);
 
 

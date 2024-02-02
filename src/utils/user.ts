@@ -1,8 +1,4 @@
-import { CHA_TABLES, SUPERSET } from "../config/config";
-import { resolveUrl } from '../utils/url';
 import { postRequest } from "./superset";
-
-const API_URL = resolveUrl(SUPERSET.baseURL, SUPERSET.apiPath);
 
 export interface User {
   active: boolean;
@@ -11,25 +7,24 @@ export interface User {
   email: string;
   username: string;
   password: string;
-  roles: any[];
+  roles: number[];
 }
 
 export interface CSVUser {
   first_name: string,
   last_name: string,
   username: string,
-  active: number,
   email: string,
   role: string,
   place: string,
   password: string
 }
 
-export const generateUser = (rawObj: any, rolesArray: any[]): User => {
-  const { active, first_name, last_name, email, username, password } = rawObj;
+export const generateUser = (rawObj: CSVUser, rolesArray: any[]): User => {
+  const { first_name, last_name, email, username, password } = rawObj;
 
   return {
-    active,
+    active: true,
     first_name,
     last_name,
     email,
@@ -41,8 +36,10 @@ export const generateUser = (rawObj: any, rolesArray: any[]): User => {
 
 export async function createUserAccounts(users: User[], headers: any) {
   users.forEach(async (user) => {
-    const response = await postRequest(API_URL, headers, `/security/users/`, JSON.stringify(user));
-    console.log(response.json());
+    console.log(JSON.stringify(user));
+
+    const response = await postRequest(headers, `/security/users/`, user);
+    console.log(response);
   });
 }
 

@@ -1,4 +1,4 @@
-import { fetchRequest, getFullUrl, getPermissionsByRoleID, initRequest } from "./superset";
+import { fetchRequest, initRequest } from "./superset";
 
 interface RoleList {
   count: number,
@@ -18,19 +18,17 @@ export const generatePermissions = (permissions: any) => ({
   permission_view_menu_ids: permissions
 });
 
-export const getDashboardViewerPermissions = async (url: string, headers: any, roleID: number) => {
-  const dashboardViewerPermissions = await getPermissionsByRoleID(url, headers, roleID);
-  return dashboardViewerPermissions.result.map((item: { id: number; }) => item.id);
-}
+// export const getDashboardViewerPermissions = async (url: string, headers: any, roleID: number) => {
+//   const dashboardViewerPermissions = await getPermissionsByRoleID(url, headers, roleID);
+//   return dashboardViewerPermissions.result.map((item: { id: number; }) => item.id);
+// }
 
-export const getRoles = async (apiUrl: string, headers: any): Promise<SupersetRole[]> => {
-  const url = getFullUrl(apiUrl, "/security/roles/");
-  const request = initRequest('get', headers);
-  const roleList: RoleList = await fetchRequest(url, request) as RoleList;
+export const getRoles = async (headers: any): Promise<SupersetRole[]> => {
+  const request = initRequest('GET', headers);
+  const roleList: RoleList = await fetchRequest("/security/roles/", request) as RoleList;
 
   console.log(`Found ${roleList.count} roles`)
 
-  roleList.result.push({ id: 7, name: "601751_kaloleni_kilifi"});
   return roleList.result;
 }
 
