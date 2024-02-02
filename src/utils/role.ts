@@ -1,11 +1,11 @@
-import { fetchRequest, initRequest } from "./superset";
+import { fetchRequest, getPermissionsByRoleID, initRequest } from "./superset";
 
 interface RoleList {
   count: number,
   ids: number[],
   result: SupersetRole[];
 }
-interface SupersetRole {
+export interface SupersetRole {
   id: number;
   name: string;
 }
@@ -18,11 +18,6 @@ export const generatePermissions = (permissions: any) => ({
   permission_view_menu_ids: permissions
 });
 
-// export const getDashboardViewerPermissions = async (url: string, headers: any, roleID: number) => {
-//   const dashboardViewerPermissions = await getPermissionsByRoleID(url, headers, roleID);
-//   return dashboardViewerPermissions.result.map((item: { id: number; }) => item.id);
-// }
-
 export const getRoles = async (headers: any): Promise<SupersetRole[]> => {
   const request = initRequest('GET', headers);
   const roleList: RoleList = await fetchRequest("/security/roles/", request) as RoleList;
@@ -32,7 +27,25 @@ export const getRoles = async (headers: any): Promise<SupersetRole[]> => {
   return roleList.result;
 }
 
-export function filterRoles(array: SupersetRole[], searchString: string): SupersetRole[] {
+export function getUserRoles(array: SupersetRole[], place: string): SupersetRole[] {
+  let roles: SupersetRole[] = [];
+
+  if (place.includes(',')) {
+    const places = place.split(',');
+
+    places.forEach(place => {
+      place = place.trim();
+      roles.push(...filterRoles(array, place))
+    })
+  }
+  else {
+    roles = filterRoles(array, place);
+  }
+
+  return roles;
+}
+
+function filterRoles(array: SupersetRole[], searchString: string): SupersetRole[] {
   const regexPattern = new RegExp(`^${searchString}_`);
   return array.filter(supersetRole => regexPattern.test(supersetRole.name));
 }

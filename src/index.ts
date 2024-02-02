@@ -4,12 +4,9 @@ import csv from 'csv-parser';
 
 import { DATA_FILE_PATH } from './config/config';
 import { loginResult, getCSRFToken, getFormattedHeaders } from './utils/auth';
-import { filterRoles, getRoles } from './utils/role';
+import { getRoles, getUserRoles } from './utils/role';
 
 import { CSVUser, User, createUserAccounts, generateUser } from './utils/user';
-
-// const DASHBOARD_VIEWER_ROLE_ID = 4; // TODO replace this with the correct role ID
-// const API_URL = resolveUrl(SUPERSET.baseURL, SUPERSET.apiPath);
 
 const readAndParse = async (fileName: string) => {
   const tokens = await loginResult();
@@ -39,14 +36,14 @@ const readAndParse = async (fileName: string) => {
       console.log(`Processed ${users.length} successfully`);
 
       users.forEach(user => {
-        const role = filterRoles(roles, user.place);
+        const userRoles = getUserRoles(roles, user.place);
 
-        if(role.length === 0) {
-          console.log(`No role found for ${user.first_name} ${user.last_name} in ${user.place}`);
+        if(userRoles.length === 0) {
+          console.log(`No roles found for ${user.first_name} ${user.last_name} in ${user.place}`);
           return;
         }
-        
-        const su = generateUser(user, role.map(r => r.id))
+
+        const su = generateUser(user, userRoles.map(r => r.id))
         supersetUsers.push(su);
       })
 
@@ -54,45 +51,7 @@ const readAndParse = async (fileName: string) => {
 
       createUserAccounts(supersetUsers, headers);
     });
-
-
-
-
-  // const dashboardViewerPermissions = getDashboardViewerPermissions(API_URL, headers, DASHBOARD_VIEWER_ROLE_ID);
-
-  // fs.createReadStream(fileName, 'utf-8')
-  //   .on('error', () => {
-  //     // handle error
-  //   })
-  //   .pipe(csv())
-  //   .on('data', async (row: any) => {
-  //     const role = generateRole(row.role, row.place);
-  //     const rolePermissions = generatePermissions(dashboardViewerPermissions);
-  //     let result = await postRequest(
-  //       API_URL,
-  //       headers,
-  //       `/security/roles/`,
-  //       stringifyRequest(role)
-  //     );
-  //     const createdRole = result as { id: string };
-  //     const rowLevelSecurity = generateRowLevelSecurity(
-  //       [createdRole.id],
-  //       `chu_code`,
-  //       row.place,
-  //       CHA_TABLES
-  //     );
-  //     await postRequest(API_URL, headers, `/security/roles/${createdRole.id}/permissions`, stringifyRequest(rolePermissions));
-  //     const user = generateUser(row, [createdRole.id]);
-  //     await postRequest(API_URL, headers, `/security/users/`, stringifyRequest(user));
-  //     await postRequest(API_URL, headers, `/rowlevelsecurity/`, stringifyRequest(rowLevelSecurity));
-  //   })
-
-  //   .on('end', () => {
-  //     // handle end of CSV
-  //   })
 };
-
-
 
 readAndParse(DATA_FILE_PATH);
 
