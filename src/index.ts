@@ -1,139 +1,93 @@
 import fs from 'fs';
 import csv from 'csv-parser';
-import { SUPERSET, CHA_TABLES, DATA_FILE_PATH } from './config/config';
+import { CHA_TABLES, DATA_FILE_PATH } from './config/config';
 
 import {
-  getBearerToken,
-  getCSRFTokenAndCookie,
+  getCSRFToken,
   getFormattedHeaders,
+  loginResult,
 } from './utils/auth';
 
-import { generateRole, generatePermissions } from './utils/role';
+import { getRoles, generateRole, generatePermissions, createUserRole } from './utils/role';
 
-import { generateRowLevelSecurity } from './utils/rowlevelsecurity';
-import { generateUser } from './utils/user';
+import { createRowlevelSecurity, generateRowLevelSecurity, getAvailableRowlevelSecurityFromSuperset } from './utils/rowlevelsecurity';
+import { CSVUser, createUserAccount, generateUser } from './utils/user';
 
-import {
-  postRequest,
-  getPermissionsByRoleID,
-  stringifyRequest,
-  getRoles,
-  getRequests,
-} from './utils/superset';
 
-import { resolveUrl } from './utils/url';
-import { IRowLevelSecurity, IUser } from './utils/interface';
+import { IRowLevelSecurity } from './utils/interface';
+import { addPermissionsForUserRole, getUserPermissions } from './utils/permissions';
 
-const DASHBOARD_VIEWER_ROLE_ID = 7;
-const API_URL = resolveUrl(SUPERSET.baseURL, SUPERSET.apiPath);
 
 const readAndParse = async (fileName: string) => {
-  const BEARER_TOKEN = await getBearerToken(API_URL, {
-    username: SUPERSET.username,
-    password: SUPERSET.password,
-    provider: 'db',
-  });
+  const tokens = await loginResult();
 
-  const [CSRF_TOKEN, COOKIE] = await getCSRFTokenAndCookie(
-    API_URL,
-    BEARER_TOKEN,
-  );
+  const csrfToken = await getCSRFToken(tokens.bearerToken);
 
-  const AUTHORIZATION_HEADERS = getFormattedHeaders(
-    BEARER_TOKEN,
-    CSRF_TOKEN,
-    COOKIE,
-  );
+  const headers = getFormattedHeaders(tokens.bearerToken, csrfToken, tokens.cookie);
 
-  const dashboardViewerPermissions = await getPermissionsByRoleID(
-    API_URL,
-    AUTHORIZATION_HEADERS,
-    DASHBOARD_VIEWER_ROLE_ID,
-  );
+  const rolesAvailableOnSuperset = await getRoles(headers);
 
-  const PERMISSIONS = dashboardViewerPermissions.result.map(
-    (item: { id: number }) => item.id,
-  );
+  const userPermissions = await getUserPermissions(rolesAvailableOnSuperset, headers);
 
-  const results: IUser[] = [];
+  let users: CSVUser[] = [];
 
-  const { result: rolesAvailableOnSuperset } = await getRoles(
-    API_URL,
-    AUTHORIZATION_HEADERS,
-  );
-
-  const { result: rowLevelFromSuperset } = await getRequests(
-    API_URL,
-    AUTHORIZATION_HEADERS,
-    `/rowlevelsecurity/`,
-  );
+  const { result: rowLevelFromSuperset } = await getAvailableRowlevelSecurityFromSuperset(headers);
 
   fs.createReadStream(fileName, 'utf-8')
     .on('error', () => {
       // handle error
     })
     .pipe(csv())
-    .on('data', (data) => results.push(data))
+    .on('data', (data) => users.push(data))
 
     .on('end', async () => {
-      for (const user of results) {
-        let roleResult;
-        const role = generateRole(user.role, user.place);
-        const rolePermissions = generatePermissions(PERMISSIONS);
+      console.log(users)
+      console.log(`Processed ${users.length} successfully`);
+
+      users.forEach(async user => {
+
+        let userRole: { id: number, name: string };
+
+        const generatedRole = generateRole(user.role, user.place);
 
         const roleExists = rolesAvailableOnSuperset.find(
-          (ssrole: { id: number; name: string }) => ssrole.name === role.name,
+          (ssrole: { id: number; name: string }) => ssrole.name === generatedRole.name,
         );
-        if (roleExists !== undefined) {
-          roleResult = roleExists;
+
+        if (roleExists) {
+          userRole = roleExists;
         } else {
-          roleResult = await postRequest(
-            API_URL,
-            AUTHORIZATION_HEADERS,
-            `/security/roles/`,
-            stringifyRequest(role),
+          userRole = await createUserRole(
+            generatedRole,
+            headers,
           );
           rolesAvailableOnSuperset.push({
-            id: roleResult.id,
-            name: roleResult.result.name,
+            id: userRole.id,
+            name: userRole.name,
           });
         }
-        const createdRole = roleResult as { id: string };
+
+        const rolePermissions = generatePermissions(userPermissions);
+        await addPermissionsForUserRole(userRole.id, rolePermissions, headers);
+
+        const generatedUser = generateUser(user, [userRole.id]);
+        await createUserAccount(generatedUser, headers);
 
         const rowLevelSecurity = generateRowLevelSecurity(
-          [createdRole.id],
+          [userRole.id],
           user.group,
           user.place,
           CHA_TABLES,
           user.role,
         );
-        await postRequest(
-          API_URL,
-          AUTHORIZATION_HEADERS,
-          `/security/roles/${createdRole.id}/permissions`,
-          stringifyRequest(rolePermissions),
-        );
-        const generatedUser = generateUser(user, [createdRole.id]);
-        await postRequest(
-          API_URL,
-          AUTHORIZATION_HEADERS,
-          `/security/users/`,
-          stringifyRequest(generatedUser),
-        );
-
         const doesRowLevelExist = rowLevelFromSuperset.some(
           (level: IRowLevelSecurity) => level.name === rowLevelSecurity.name,
         );
         if (!doesRowLevelExist) {
-          const response = await postRequest(
-            API_URL,
-            AUTHORIZATION_HEADERS,
-            `/rowlevelsecurity/`,
-            stringifyRequest(rowLevelSecurity),
-          );
-          rowLevelFromSuperset.push(response.result);
+          const response = await createRowlevelSecurity(rowLevelSecurity, headers);
+          rowLevelFromSuperset.push(response);
         }
-      }
+      });
     });
 };
 

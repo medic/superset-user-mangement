@@ -1,81 +1,55 @@
-const fetch = require('node-fetch');
-
-export const getFullUrl = (apiUrl: string, endpoint: string) =>
-  `${apiUrl}${endpoint}`;
+import fetch, { RequestInit } from 'node-fetch';
+import { API_URL } from './auth';
 
 export const initRequest = (
-  method: string,
+  method: 'GET' | 'POST',
   authorizationHeaders: any,
-): any => ({
-  method: method,
+): RequestInit => ({
+  method,
   headers: authorizationHeaders,
 });
 
-export const mergeRequest = (baseObj: any, objToSync: any): any => {
-  return {
-    ...baseObj,
-    body: objToSync,
-  };
-};
+export const mergeRequest = (
+  baseObj: RequestInit,
+  objToSync: any,
+): RequestInit => ({
+  ...baseObj,
+  body: JSON.stringify(objToSync),
+});
 
-export const fetchRequest = async (url: string, request: any) => {
-  try {
-    const response = await fetch(url, request);
+export const fetchRequest = async (
+  endpoint: string,
+  request: RequestInit,
+): Promise<any> => {
+  const url = `${API_URL}${endpoint}`;
+  console.log(url);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching data:', error.message);
-    throw error;
+  const response = await fetch(url, request);
+  if (!response.ok) {
+    // throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
+    console.log(
+      `HTTP error! status: ${response.status} ${response.statusText}`,
+    );
   }
+  return await response.json();
 };
-
 
 export const postRequest = async (
-  apiUrl: string,
   authorizationHeaders: any,
   endpoint: string,
   body: any,
-) => {
-  const method = 'post';
-  const url = getFullUrl(apiUrl, endpoint);
+): Promise<any> => {
+  const method = 'POST';
   const request = mergeRequest(initRequest(method, authorizationHeaders), body);
-  return await fetchRequest(url, request);
+  return await fetchRequest(endpoint, request);
 };
 
 export const getPermissionsByRoleID = async (
-  apiUrl: string,
   authorizationHeaders: any,
   roleID: number,
-) => {
-  const method = 'get';
+): Promise<any> => {
+  const method = 'GET';
   const endpoint = `/security/roles/${roleID}/permissions/`;
-  const url = getFullUrl(apiUrl, endpoint);
   const request = initRequest(method, authorizationHeaders);
-  return await fetchRequest(url, request);
+  return await fetchRequest(endpoint, request);
 };
-
-export const getRoles = async (apiUrl: string, authorizationHeaders: any) => {
-  const method = 'get';
-  const endpoint = `/security/roles/`;
-  const url = getFullUrl(apiUrl, endpoint);
-  const request = initRequest(method, authorizationHeaders);
-  return await fetchRequest(url, request);
-};
-
-export const getRequests = async (
-  apiUrl: string,
-  authorizationHeaders: any,
-  endpoint: string,
-) => {
-  const method = 'get';
-  const url = getFullUrl(apiUrl, endpoint);
-  const request = initRequest(method, authorizationHeaders);
-  return await fetchRequest(url, request);
-};
-
-export const stringifyRequest = (request: any): any => JSON.stringify(request);

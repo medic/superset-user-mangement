@@ -1,10 +1,9 @@
 export interface IUser {
-  no: number;
   first_name: string;
   last_name: string;
   active: boolean;
   email: string;
-  role: string;
+  roles: string;
   place: string;
   group: string;
   password: string;
