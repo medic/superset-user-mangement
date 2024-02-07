@@ -2,36 +2,50 @@ import fs from 'fs';
 import csv from 'csv-parser';
 import { CHA_TABLES, DATA_FILE_PATH } from './config/config';
 
+import { getCSRFToken, getFormattedHeaders, loginResult } from './utils/auth';
+
 import {
-  getCSRFToken,
-  getFormattedHeaders,
-  loginResult,
-} from './utils/auth';
+  getRoles,
+  generateRole,
+  generatePermissions,
+  createUserRole,
+} from './utils/role';
 
-import { getRoles, generateRole, generatePermissions, createUserRole } from './utils/role';
-
-import { createRowlevelSecurity, generateRowLevelSecurity, getAvailableRowlevelSecurityFromSuperset } from './utils/rowlevelsecurity';
+import {
+  createRowlevelSecurity,
+  generateRowLevelSecurity,
+  getAvailableRowlevelSecurityFromSuperset,
+} from './utils/rowlevelsecurity';
 import { CSVUser, createUserAccount, generateUser } from './utils/user';
 
-
 import { IRowLevelSecurity } from './utils/interface';
-import { addPermissionsForUserRole, getUserPermissions } from './utils/permissions';
-
+import {
+  addPermissionsForUserRole,
+  getUserPermissions,
+} from './utils/permissions';
 
 const readAndParse = async (fileName: string) => {
   const tokens = await loginResult();
 
   const csrfToken = await getCSRFToken(tokens.bearerToken);
 
-  const headers = getFormattedHeaders(tokens.bearerToken, csrfToken, tokens.cookie);
+  const headers = getFormattedHeaders(
+    tokens.bearerToken,
+    csrfToken,
+    tokens.cookie,
+  );
 
   const rolesAvailableOnSuperset = await getRoles(headers);
 
-  const userPermissions = await getUserPermissions(rolesAvailableOnSuperset, headers);
+  const userPermissions = await getUserPermissions(
+    rolesAvailableOnSuperset,
+    headers,
+  );
 
-  let users: CSVUser[] = [];
+  const users: CSVUser[] = [];
 
-  const { result: rowLevelFromSuperset } = await getAvailableRowlevelSecurityFromSuperset(headers);
+  const { result: rowLevelFromSuperset } =
+    await getAvailableRowlevelSecurityFromSuperset(headers);
 
   fs.createReadStream(fileName, 'utf-8')
     .on('error', () => {
@@ -41,26 +55,23 @@ const readAndParse = async (fileName: string) => {
     .on('data', (data) => users.push(data))
 
     .on('end', async () => {
-      console.log(users)
+      console.log(users);
       console.log(`Processed ${users.length} successfully`);
 
-      users.forEach(async user => {
-
-        let userRole: { id: number, name: string };
+      users.forEach(async (user) => {
+        let userRole: { id: number; name: string };
 
         const generatedRole = generateRole(user.role, user.place);
 
         const roleExists = rolesAvailableOnSuperset.find(
-          (ssrole: { id: number; name: string }) => ssrole.name === generatedRole.name,
+          (ssrole: { id: number; name: string }) =>
+            ssrole.name === generatedRole.name,
         );
 
         if (roleExists) {
           userRole = roleExists;
         } else {
-          userRole = await createUserRole(
-            generatedRole,
-            headers,
-          );
+          userRole = await createUserRole(generatedRole, headers);
           rolesAvailableOnSuperset.push({
             id: userRole.id,
             name: userRole.name,
@@ -84,7 +95,10 @@ const readAndParse = async (fileName: string) => {
           (level: IRowLevelSecurity) => level.name === rowLevelSecurity.name,
         );
         if (!doesRowLevelExist) {
-          const response = await createRowlevelSecurity(rowLevelSecurity, headers);
+          const response = await createRowlevelSecurity(
+            rowLevelSecurity,
+            headers,
+          );
           rowLevelFromSuperset.push(response);
         }
       });
