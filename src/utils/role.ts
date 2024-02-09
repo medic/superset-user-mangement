@@ -31,10 +31,16 @@ export const getRoles = async (headers: any): Promise<SupersetRole[]> => {
 };
 
 export const createUserRole = async (role: { name: string }, headers: any) => {
-  const createdRole = await postRequest(
-    headers,
-    `/security/roles/`,
-    JSON.stringify(role),
-  );
-  return { id: createdRole.id, name: createdRole.result.name };
+  try {
+    const { id, result } = await postRequest(
+      headers,
+      `/security/roles/`,
+      JSON.stringify(role),
+    );
+    return { id, name: result.name };
+  } catch (error) {
+    // Handle the error here
+    console.error('Error creating role:', error);
+    throw new Error('Failed to create role');
+  }
 };

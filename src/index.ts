@@ -9,6 +9,7 @@ import {
   generateRole,
   generatePermissions,
   createUserRole,
+  SupersetRole,
 } from './utils/role';
 
 import {
@@ -18,7 +19,7 @@ import {
 } from './utils/rowlevelsecurity';
 import { CSVUser, createUserAccount, generateUser } from './utils/user';
 
-import { IRowLevelSecurity } from './utils/interface';
+import { IRowLevelSecurityFromSuperset } from './utils/interface';
 import {
   addPermissionsForUserRole,
   getUserPermissions,
@@ -59,17 +60,17 @@ const readAndParse = async (fileName: string) => {
       console.log(`Processed ${users.length} successfully`);
 
       users.forEach(async (user) => {
-        let userRole: { id: number; name: string };
+        let userRole: SupersetRole;
 
         const generatedRole = generateRole(user.role, user.place);
 
-        const roleExists = rolesAvailableOnSuperset.find(
+        const existingRoleOnSuperset = rolesAvailableOnSuperset.find(
           (ssrole: { id: number; name: string }) =>
             ssrole.name === generatedRole.name,
         );
 
-        if (roleExists) {
-          userRole = roleExists;
+        if (existingRoleOnSuperset) {
+          userRole = existingRoleOnSuperset;
         } else {
           userRole = await createUserRole(generatedRole, headers);
           rolesAvailableOnSuperset.push({
@@ -92,7 +93,8 @@ const readAndParse = async (fileName: string) => {
           user.role,
         );
         const doesRowLevelExist = rowLevelFromSuperset.some(
-          (level: IRowLevelSecurity) => level.name === rowLevelSecurity.name,
+          (level: IRowLevelSecurityFromSuperset) =>
+            level.name === rowLevelSecurity.name,
         );
         if (!doesRowLevelExist) {
           const response = await createRowlevelSecurity(

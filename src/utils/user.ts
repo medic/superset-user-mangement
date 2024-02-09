@@ -1,4 +1,4 @@
-import { IUser } from './interface';
+import { IHeaders, IUser } from './interface';
 import { postRequest } from './superset';
 
 export interface User {
@@ -46,6 +46,6 @@ export const generateUser = (rawObj: any, rolesArray: any) => {
   };
 };
 
-export const createUserAccount = async (user: IUser, headers: any) => {
+export const createUserAccount = async (user: IUser, headers: IHeaders) => {
   return await postRequest(headers, `/security/users/`, JSON.stringify(user));
 };

@@ -1,11 +1,15 @@
-import { IRowLevelSecurity } from './interface';
+import {
+  IHeaders,
+  IRowLevelSecurity,
+  IRowLevelSecurityFromSuperset,
+} from './interface';
 import { fetchRequest, initRequest, postRequest } from './superset';
 
 export const generateRowLevelSecurity = (
-  roles: any,
+  roles: number[],
   groupKey: string,
   placeCode: string,
-  tables: any,
+  tables: string,
   userType: string,
 ) => ({
   clause: `${groupKey}='${placeCode}'`,
@@ -17,8 +21,8 @@ export const generateRowLevelSecurity = (
 });
 
 export const getAvailableRowlevelSecurityFromSuperset = async (
-  authorizationHeaders: any,
-): Promise<any> => {
+  authorizationHeaders: IHeaders,
+): Promise<{ result: IRowLevelSecurityFromSuperset[] }> => {
   const method = 'GET';
   const endpoint = `/rowlevelsecurity/`;
   const request = initRequest(method, authorizationHeaders);
@@ -27,7 +31,7 @@ export const getAvailableRowlevelSecurityFromSuperset = async (
 
 export const createRowlevelSecurity = async (
   rowlevelsecurity: IRowLevelSecurity,
-  headers: any,
+  headers: IHeaders,
 ) => {
   return await postRequest(
     headers,

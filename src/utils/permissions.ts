@@ -1,18 +1,18 @@
 import { DASHBOARD_VIEWER } from './const';
+import { IHeaders } from './interface';
 import { SupersetRole } from './role';
 import { getPermissionsByRoleID, postRequest } from './superset';
 
 export const getUserPermissions = async (
   availableSupersetRoles: SupersetRole[],
-  headers: any,
+  headers: IHeaders,
 ) => {
-  let dasboardViewerRole = availableSupersetRoles.find(
+  const dasboardViewerRole = availableSupersetRoles.find(
     (ssrole: { id: number; name: string }) => ssrole.name === DASHBOARD_VIEWER,
   );
 
   if (!dasboardViewerRole) {
-    // Number got directly from Superset, could change
-    dasboardViewerRole = { id: 7, name: DASHBOARD_VIEWER };
+    throw new Error('Dashboard Viewer role does not exist. Please create it!');
   }
 
   const dashboardViewerPermissions = await getPermissionsByRoleID(
@@ -30,7 +30,7 @@ export const addPermissionsForUserRole = async (
   permissions: {
     permission_view_menu_ids: number[];
   },
-  headers: any,
+  headers: IHeaders,
 ) => {
   await postRequest(
     headers,

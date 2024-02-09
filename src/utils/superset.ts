@@ -1,5 +1,6 @@
 import fetch, { RequestInit } from 'node-fetch';
 import { API_URL } from './auth';
+import { IHeaders } from './interface';
 
 export const initRequest = (
   method: 'GET' | 'POST',
@@ -35,7 +36,7 @@ export const fetchRequest = async (
 };
 
 export const postRequest = async (
-  authorizationHeaders: any,
+  authorizationHeaders: IHeaders,
   endpoint: string,
   body: any,
 ): Promise<any> => {
@@ -45,9 +46,11 @@ export const postRequest = async (
 };
 
 export const getPermissionsByRoleID = async (
-  authorizationHeaders: any,
+  authorizationHeaders: IHeaders,
   roleID: number,
-): Promise<any> => {
+): Promise<{
+  result: { id: number; permission_name: string; view_menu_name: string }[];
+}> => {
   const method = 'GET';
   const endpoint = `/security/roles/${roleID}/permissions/`;
   const request = initRequest(method, authorizationHeaders);
