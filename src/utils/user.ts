@@ -47,5 +47,14 @@ export const generateUser = (rawObj: any, rolesArray: any) => {
 };
 
 export const createUserAccount = async (user: IUser, headers: IHeaders) => {
-  return await postRequest(headers, `/security/users/`, JSON.stringify(user));
+  try {
+    const response = await postRequest(
+      headers,
+      `/security/users/`,
+      JSON.stringify(user),
+    );
+    return response;
+  } catch (error) {
+    console.error('Error creating user account:', error);
+  }
 };
