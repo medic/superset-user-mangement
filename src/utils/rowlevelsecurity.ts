@@ -33,9 +33,14 @@ export const createRowlevelSecurity = async (
   rowlevelsecurity: IRowLevelSecurity,
   headers: IHeaders,
 ) => {
-  return await postRequest(
-    headers,
-    `/rowlevelsecurity/`,
-    JSON.stringify(rowlevelsecurity),
-  );
+  try {
+    const response = await postRequest(
+      headers,
+      `/rowlevelsecurity/`,
+      JSON.stringify(rowlevelsecurity),
+    );
+    return response;
+  } catch (error) {
+    console.error('Error creating user rowlevel security:', error);
+  }
 };

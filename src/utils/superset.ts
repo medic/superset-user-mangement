@@ -2,6 +2,10 @@ import fetch, { RequestInit } from 'node-fetch';
 import { API_URL } from './auth';
 import { IHeaders } from './interface';
 
+interface IBody {
+  [key: string]: any;
+}
+
 export const initRequest = (
   method: 'GET' | 'POST',
   authorizationHeaders: any,
@@ -12,7 +16,7 @@ export const initRequest = (
 
 export const mergeRequest = (
   baseObj: RequestInit,
-  objToSync: any,
+  objToSync: IBody,
 ): RequestInit => ({
   ...baseObj,
   body: JSON.stringify(objToSync),
@@ -38,7 +42,7 @@ export const fetchRequest = async (
 export const postRequest = async (
   authorizationHeaders: IHeaders,
   endpoint: string,
-  body: any,
+  body: IBody,
 ): Promise<any> => {
   const method = 'POST';
   const request = mergeRequest(initRequest(method, authorizationHeaders), body);

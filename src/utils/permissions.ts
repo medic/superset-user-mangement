@@ -32,9 +32,14 @@ export const addPermissionsForUserRole = async (
   },
   headers: IHeaders,
 ) => {
-  await postRequest(
-    headers,
-    `/security/roles/${roleId}/permissions`,
-    JSON.stringify(permissions),
-  );
+  try {
+    const response = await postRequest(
+      headers,
+      `/security/roles/${roleId}/permissions`,
+      JSON.stringify(permissions),
+    );
+    return response;
+  } catch (error) {
+    console.error('Error adding permissions for user role:', error);
+  }
 };
