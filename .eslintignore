@@ -1,0 +1,6 @@
+# do not lint node_modules
+node_modules
+# do not lint build
+build
+# do not lint coverage
+coverage
