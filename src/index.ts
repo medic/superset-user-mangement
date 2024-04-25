@@ -4,9 +4,10 @@ import csv from 'csv-parser';
 
 import { DATA_FILE_PATH } from './config/config';
 import { loginResult, getCSRFToken, getFormattedHeaders } from './utils/auth';
-import { getRoles, getUserRoles } from './utils/role';
+import { getRoles, getCHARoles } from './utils/role';
 
 import { CSVUser, User, createUserAccounts, generateUser } from './utils/user';
+import collect from 'collect.js';
 
 const readAndParse = async (fileName: string) => {
   const tokens = await loginResult();
@@ -15,10 +16,11 @@ const readAndParse = async (fileName: string) => {
   const headers = getFormattedHeaders(tokens.bearerToken, csrfToken, tokens.cookie);
 
   const roles = await getRoles(headers);
-  console.log(roles);
+  console.log(`Found ${roles.length} roles`);
 
   let users: CSVUser[] = [];
   let supersetUsers: User[] = [];
+  let errorList: CSVUser[] = [];
 
   fs.createReadStream(fileName)
     .on('error', () => {
@@ -36,10 +38,11 @@ const readAndParse = async (fileName: string) => {
       console.log(`Processed ${users.length} successfully`);
 
       users.forEach(user => {
-        const userRoles = getUserRoles(roles, user.place);
+        const userRoles = getCHARoles(roles, user.chu);
 
         if(userRoles.length === 0) {
-          console.log(`No roles found for ${user.first_name} ${user.last_name} in ${user.place}`);
+          console.log(`No roles found for ${user.first_name} ${user.last_name} in ${user.chu}`);
+          errorList.push(user);
           return;
         }
 
@@ -49,9 +52,22 @@ const readAndParse = async (fileName: string) => {
 
       console.log(supersetUsers);
 
-      createUserAccounts(supersetUsers, headers);
+      // createUserAccounts(supersetUsers, headers);
+
+      printErrorList(errorList);
     });
 };
+
+function printErrorList(errorList: CSVUser[]) {
+  const list = collect(errorList);
+  console.log(`Errors: ${list.count()}`);
+
+  console.log(list.toJson());
+
+  console.log('Exiting...');
+  process.exit();
+}
+
 
 readAndParse(DATA_FILE_PATH);
 

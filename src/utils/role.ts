@@ -1,4 +1,5 @@
 import { fetchRequest, getPermissionsByRoleID, initRequest } from "./superset";
+import collect from "collect.js";
 
 interface RoleList {
   count: number,
@@ -10,6 +11,8 @@ export interface SupersetRole {
   name: string;
 }
 
+// TODO explore if this is the format to be used when creating a role. 
+// Current implementation uses {chuCode_chuName} format
 export const generateRole = (userType: string, placeCode: number) => ({
   name: `${userType}_${placeCode}`
 });
@@ -22,30 +25,30 @@ export const getRoles = async (headers: any): Promise<SupersetRole[]> => {
   const request = initRequest('GET', headers);
   const roleList: RoleList = await fetchRequest("/security/roles/", request) as RoleList;
 
-  console.log(`Found ${roleList.count} roles`)
-
   return roleList.result;
 }
 
-export function getUserRoles(array: SupersetRole[], place: string): SupersetRole[] {
+export function getCHARoles(array: SupersetRole[], place: string): SupersetRole[] {
   let roles: SupersetRole[] = [];
+
+  console.log(place);
 
   if (place.includes(',')) {
     const places = place.split(',');
 
     places.forEach(place => {
       place = place.trim();
-      roles.push(...filterRoles(array, place))
+      roles.push(...filterCHARoles(array, place))
     })
   }
   else {
-    roles = filterRoles(array, place);
+    roles = filterCHARoles(array, place);
   }
 
   return roles;
 }
 
-function filterRoles(array: SupersetRole[], searchString: string): SupersetRole[] {
+function filterCHARoles(roles: SupersetRole[], searchString: string): SupersetRole[] {
   const regexPattern = new RegExp(`^${searchString}_`);
-  return array.filter(supersetRole => regexPattern.test(supersetRole.name));
+  return roles.filter(supersetRole => regexPattern.test(supersetRole.name));
 }

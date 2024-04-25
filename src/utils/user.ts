@@ -16,7 +16,7 @@ export interface CSVUser {
   username: string,
   email: string,
   role: string,
-  place: string,
+  chu: string,
   password: string
 }
 
@@ -35,12 +35,12 @@ export const generateUser = (rawObj: CSVUser, rolesArray: any[]): User => {
 };
 
 export async function createUserAccounts(users: User[], headers: any) {
-  users.forEach(async (user) => {
+  for (const user of users) {
     console.log(JSON.stringify(user));
 
     const response = await postRequest(headers, `/security/users/`, user);
     console.log(response);
-  });
+  }
 }
 
 // export function createNewSupersetUser(csvUser: CSVUser, dashboardViewerPermissions:): User {

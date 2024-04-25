@@ -51,8 +51,10 @@
     "typescript": "^4.7.4"
   },
   "dependencies": {
+    "collect.js": "^4.36.1",
     "csv-parser": "^3.0.0",
     "jest-cucumber": "^3.0.1",
-    "node-fetch": "^2.6.7"
+    "node-fetch": "^2.6.7",
+    "redis": "^4.6.13"
   }
 }

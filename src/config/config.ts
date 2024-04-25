@@ -2,11 +2,11 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 export const SUPERSET = {
-  username: getEnvironmentVariable('SUPERSET_USERNAME', 'admin'),
-  password: getEnvironmentVariable('SUPERSET_PASSWORD', 'admin'),
+  username: getEnvironmentVariable('SUPERSET_USERNAME', 'kombo@medic.org'),
+  password: getEnvironmentVariable('SUPERSET_PASSWORD', 'cdpbvkqyYe84j*TMXr4wpGxjYTvemqBC!FcJMZfXxL!k4_YTvB'),
   baseURL: getEnvironmentVariable(
     'SUPERSET_BASE_URL',
-    'http://localhost:8088'
+    'https://superset.echis.go.ke'
   ),
   apiPath: getEnvironmentVariable(
     'SUPERSET_API_PATH',
@@ -17,7 +17,7 @@ export const SUPERSET = {
 
 export const CHA_TABLES = getEnvironmentVariable('CHA_TABLES', '[]');
 
-export const DATA_FILE_PATH = getEnvironmentVariable('DATA_FILE_PATH', 'src/template.csv');
+export const DATA_FILE_PATH = getEnvironmentVariable('DATA_FILE_PATH', 'src/makadara.csv');
 
 function getEnvironmentVariable(env: string, def: string) {
   if (process.env.NODE_ENV === 'test') {
