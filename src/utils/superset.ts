@@ -17,7 +17,6 @@ export const fetchRequest = async (endpoint: string, request: RequestInit): Prom
 
   const response = await fetch(url, request);
   if (!response.ok) {
-    // throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
     console.log(`HTTP error! status: ${response.status} ${response.statusText}`);
   }
   return await response.json();

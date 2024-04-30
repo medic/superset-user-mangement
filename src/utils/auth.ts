@@ -46,7 +46,7 @@ export const loginResult = async (): Promise<{ bearerToken: string, cookie: stri
     headers: { 'Content-Type': 'application/json' }
   });
 
-  const cookie = headers.get('Set-Cookie') || '';
+  const cookie = headers.get('Set-Cookie') ?? '';
   return { bearerToken: json.access_token, cookie };
 };
 

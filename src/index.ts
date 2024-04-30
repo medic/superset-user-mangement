@@ -17,45 +17,45 @@ const readAndParse = async (fileName: string) => {
 
   const roles = await getRoles(headers);
   console.log(`Found ${roles.length} roles`);
-
-  let users: CSVUser[] = [];
-  let supersetUsers: User[] = [];
-  let errorList: CSVUser[] = [];
-
-  fs.createReadStream(fileName)
-    .on('error', () => {
-      throw new Error('File not found')
-    })
-    .pipe(csv())
-    .on('data', (data: CSVUser) => {
-      users.push(data);
-    })
-    .on('error', (error: Error) => {
-      console.log(error.message);
-    })
-    .on('end', () => {
-      console.log(users)
-      console.log(`Processed ${users.length} successfully`);
-
-      users.forEach(user => {
-        const userRoles = getCHARoles(roles, user.chu);
-
-        if(userRoles.length === 0) {
-          console.log(`No roles found for ${user.first_name} ${user.last_name} in ${user.chu}`);
-          errorList.push(user);
-          return;
-        }
-
-        const su = generateUser(user, userRoles.map(r => r.id))
-        supersetUsers.push(su);
-      })
-
-      console.log(supersetUsers);
-
-      // createUserAccounts(supersetUsers, headers);
-
-      printErrorList(errorList);
-    });
+  //
+  // let users: CSVUser[] = [];
+  // let supersetUsers: User[] = [];
+  // let errorList: CSVUser[] = [];
+  //
+  // fs.createReadStream(fileName)
+  //   .on('error', () => {
+  //     throw new Error('File not found')
+  //   })
+  //   .pipe(csv())
+  //   .on('data', (data: CSVUser) => {
+  //     users.push(data);
+  //   })
+  //   .on('error', (error: Error) => {
+  //     console.log(error.message);
+  //   })
+  //   .on('end', () => {
+  //     console.log(users)
+  //     console.log(`Processed ${users.length} successfully`);
+  //
+  //     users.forEach(user => {
+  //       const userRoles = getCHARoles(roles, user.chu);
+  //
+  //       if(userRoles.length === 0) {
+  //         console.log(`No roles found for ${user.first_name} ${user.last_name} in ${user.chu}`);
+  //         errorList.push(user);
+  //         return;
+  //       }
+  //
+  //       const su = generateUser(user, userRoles.map(r => r.id))
+  //       supersetUsers.push(su);
+  //     })
+  //
+  //     console.log(supersetUsers);
+  //
+  //     // createUserAccounts(supersetUsers, headers);
+  //
+  //     printErrorList(errorList);
+  //   });
 };
 
 function printErrorList(errorList: CSVUser[]) {
