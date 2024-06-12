@@ -1,10 +1,6 @@
-
-import fs from 'fs';
-import csv from 'csv-parser';
-
 import { DATA_FILE_PATH } from './config/config';
 import { loginResult, getCSRFToken, getFormattedHeaders } from './utils/auth';
-import { getRoles, getCHARoles } from './utils/role';
+import {fetchAllRoles, updateRolePermissions} from "./utils/role";
 
 import { CSVUser, User, createUserAccounts, generateUser } from './utils/user';
 import collect from 'collect.js';
@@ -15,8 +11,17 @@ const readAndParse = async (fileName: string) => {
 
   const headers = getFormattedHeaders(tokens.bearerToken, csrfToken, tokens.cookie);
 
-  const roles = await getRoles(headers);
-  console.log(`Found ${roles.length} roles`);
+  // await fetchAllRoles(headers);
+
+  const updatedRoles = await updateRolePermissions(headers);
+  console.log(`Updated ${updatedRoles.length} roles`);
+
+  // const roleKeys = await fetchRolesFromRedis();
+  // const role = await getRole(roleKeys[0]);
+  // console.log(role);
+
+  // const roles = await getRoles(headers);
+  // console.log(`Found ${roles.length} roles`);
   //
   // let users: CSVUser[] = [];
   // let supersetUsers: User[] = [];
@@ -70,5 +75,3 @@ function printErrorList(errorList: CSVUser[]) {
 
 
 readAndParse(DATA_FILE_PATH);
-
-

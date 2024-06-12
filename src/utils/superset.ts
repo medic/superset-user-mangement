@@ -28,9 +28,3 @@ export const postRequest = async (authorizationHeaders: any, endpoint: string, b
   return await fetchRequest(endpoint, request);
 };
 
-export const getPermissionsByRoleID = async (authorizationHeaders: any, roleID: number): Promise<any> => {
-  const method = 'GET';
-  const endpoint = `/security/roles/${roleID}/permissions/`;
-  const request = initRequest(method, authorizationHeaders);
-  return await fetchRequest(endpoint, request);
-};

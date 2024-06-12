@@ -1,4 +1,6 @@
 import { postRequest } from "./superset";
+import {createClient} from "redis";
+import {getCHUCodes} from "./role";
 
 export interface User {
   active: boolean;
@@ -43,6 +45,28 @@ export async function createUserAccounts(users: User[], headers: any) {
   }
 }
 
+export async function generateSupersetUsers(users: CSVUser[]): Promise<User[]> {
+  const supersetUsers: User[] = [];
+
+  const redisClient = createClient()
+  await redisClient.connect()
+
+  users.forEach(user => {
+    const chuCodes = getCHUCodes(user.chu)
+
+    const roles: string[] = [];
+    chuCodes.forEach(chuCode => {
+      const role = redisClient.hGet(chuCode, "role");
+
+
+    });
+
+    supersetUsers.push(generateUser(user, roles));
+  });
+
+  return supersetUsers;
+}
+
 // export function createNewSupersetUser(csvUser: CSVUser, dashboardViewerPermissions:): User {
 //   const role = generateRole(csvUser.role, csvUser.place);
 //   const rolePermissions = generatePermissions(dashboardViewerPermissions);
@@ -59,9 +83,3 @@ export async function createUserAccounts(users: User[], headers: any) {
 //     row.place,
 //     CHA_TABLES
 //   );
-
-
-//   const user = generateUser(csvUser, [csvUser.role]);
-//   user.password = csvUser.password;
-//   return user;
-// }
