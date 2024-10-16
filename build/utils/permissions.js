@@ -1,15 +1,4 @@
 "use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -46,49 +35,37 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.postRequest = exports.fetchRequest = exports.mergeRequest = exports.initRequest = void 0;
-var node_fetch_1 = __importDefault(require("node-fetch"));
-var auth_1 = require("./auth");
-var initRequest = function (method, authorizationHeaders) { return ({
-    method: method,
-    headers: authorizationHeaders
-}); };
-exports.initRequest = initRequest;
-var mergeRequest = function (baseObj, objToSync) { return (__assign(__assign({}, baseObj), { body: JSON.stringify(objToSync) })); };
-exports.mergeRequest = mergeRequest;
-var fetchRequest = function (endpoint, request) { return __awaiter(void 0, void 0, void 0, function () {
-    var url, response;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                url = "".concat(auth_1.API_URL).concat(endpoint);
-                console.log(url);
-                return [4 /*yield*/, (0, node_fetch_1.default)(url, request)];
-            case 1:
-                response = _a.sent();
-                if (!response.ok) {
-                    console.log("HTTP error! status: ".concat(response.status, " ").concat(response.statusText));
-                }
-                return [4 /*yield*/, response.json()];
-            case 2: return [2 /*return*/, _a.sent()];
-        }
+exports.chaPermissionList = exports.updatePermissions = exports.getPermissionsByRoleId = void 0;
+var superset_1 = require("./superset");
+function getPermissionsByRoleId(authorizationHeaders, roleID) {
+    return __awaiter(this, void 0, void 0, function () {
+        var method, endpoint, request;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    method = 'GET';
+                    endpoint = "/security/roles/".concat(roleID, "/permissions/");
+                    request = (0, superset_1.initRequest)(method, authorizationHeaders);
+                    return [4 /*yield*/, (0, superset_1.fetchRequest)(endpoint, request)];
+                case 1: return [2 /*return*/, _a.sent()];
+            }
+        });
     });
-}); };
-exports.fetchRequest = fetchRequest;
-var postRequest = function (authorizationHeaders, endpoint, body) { return __awaiter(void 0, void 0, void 0, function () {
-    var method, request;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                method = 'POST';
-                request = (0, exports.mergeRequest)((0, exports.initRequest)(method, authorizationHeaders), body);
-                return [4 /*yield*/, (0, exports.fetchRequest)(endpoint, request)];
-            case 1: return [2 /*return*/, _a.sent()];
-        }
+}
+exports.getPermissionsByRoleId = getPermissionsByRoleId;
+;
+function updatePermissions(roleId, headers, menuIds) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, (0, superset_1.postRequest)(headers, "/security/roles/".concat(roleId, "/permissions"), menuIds)];
+                case 1: return [2 /*return*/, _a.sent()];
+            }
+        });
     });
-}); };
-exports.postRequest = postRequest;
+}
+exports.updatePermissions = updatePermissions;
+exports.chaPermissionList = [
+    3, 7, 9, 11, 15, 22, 23, 30, 32, 41, 42, 43, 44, 45, 46, 47, 48, 50, 52, 53, 55, 62, 63, 65, 67, 69, 70, 71, 78, 82, 83, 88, 90, 91, 92, 99, 102, 103, 104, 105, 107, 108, 109, 110, 111, 112, 113, 114, 115, 118, 119, 120, 121, 122, 123, 125, 126, 127, 128, 130, 131, 134, 135, 136, 138, 140, 141, 142, 144, 145, 147, 148, 151, 162, 163, 164, 165, 166, 167, 169, 171, 178, 183, 185, 186, 187, 188, 192, 194, 201, 202, 206, 207, 263, 266, 295, 296, 297, 350
+];

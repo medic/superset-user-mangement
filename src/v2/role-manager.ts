@@ -8,18 +8,25 @@ import { chaPermissionList, PermissionManager } from './permission-manager';
 import { SupersetRole, RoleList } from './role.model';
 import { MenuIds } from './permission.model';
 import { AuthManager } from './auth-manager';
+import { RoleStore } from './role-store';
+import { RoleAdapter } from './role-adapter';
 
 export class RoleManager {
   private authManager: AuthManager;
+  private roleStore: RoleStore;
+  private roleAdapter: RoleAdapter;
   private headers: any;
 
   constructor() {
     this.authManager = new AuthManager();
+    this.roleStore = new RoleStore();
+    this.roleAdapter = new RoleAdapter();
     this.headers = null;
   }
 
   private async initHeaders() {
     if (!this.headers) {
+      console.log('Initing headers')
       this.headers = await this.authManager.getHeaders();
     }
   }
@@ -29,6 +36,8 @@ export class RoleManager {
    */
   public async fetchSupersetRoles() {
     await this.initHeaders();
+
+    console.log('Headers fetched successfully');
 
     let currentPage = 0;
     let roles: SupersetRole[] = [];
@@ -48,6 +57,9 @@ export class RoleManager {
       // Append roles from the current page to the allRoles array
       roles = roles.concat(roleList.result);
 
+      console.log(`Fetched ${roleList.result.length} roles from page ${currentPage} \n
+        ${roles.length} fetched so far`);
+
       // If there are no more roles on the current page, break out of the loop
       if (roleList.result.length === 0) {
         console.log(`Reached page ${currentPage}. No more roles to fetch.`);
@@ -59,6 +71,11 @@ export class RoleManager {
     }
 
     return roles;
+  }
+
+  public async saveSupersetRoles(roles: SupersetRole[]) {
+    const parsedRoles = await this.roleAdapter.toParsedRole(roles);
+    await this.roleStore.saveRoles(parsedRoles);
   }
 
   /**

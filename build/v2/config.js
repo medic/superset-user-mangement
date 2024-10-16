@@ -1,4 +1,7 @@
 "use strict";
+/**
+ * Superset access configs
+ */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -23,7 +26,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DATA_FILE_PATH = exports.CHA_TABLES = exports.SUPERSET = void 0;
+exports.DATA_FILE_PATH = exports.SUPERSET = void 0;
 var dotenv = __importStar(require("dotenv"));
 dotenv.config();
 exports.SUPERSET = {
@@ -33,12 +36,8 @@ exports.SUPERSET = {
     apiPath: getEnvironmentVariable('SUPERSET_API_PATH', '/api/v1'),
     trustSelfSigned: true,
 };
-exports.CHA_TABLES = getEnvironmentVariable('CHA_TABLES', '[]');
 exports.DATA_FILE_PATH = getEnvironmentVariable('DATA_FILE_PATH', 'src/makadara.csv');
 function getEnvironmentVariable(env, def) {
     var _a;
-    if (process.env.NODE_ENV === 'test') {
-        return def;
-    }
     return (_a = process.env[env]) !== null && _a !== void 0 ? _a : def;
 }

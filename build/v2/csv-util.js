@@ -1,15 +1,7 @@
 "use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
+/**
+ * Helper function to parse CHA details from CSV
+ */
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -50,45 +42,31 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.postRequest = exports.fetchRequest = exports.mergeRequest = exports.initRequest = void 0;
-var node_fetch_1 = __importDefault(require("node-fetch"));
-var auth_1 = require("./auth");
-var initRequest = function (method, authorizationHeaders) { return ({
-    method: method,
-    headers: authorizationHeaders
-}); };
-exports.initRequest = initRequest;
-var mergeRequest = function (baseObj, objToSync) { return (__assign(__assign({}, baseObj), { body: JSON.stringify(objToSync) })); };
-exports.mergeRequest = mergeRequest;
-var fetchRequest = function (endpoint, request) { return __awaiter(void 0, void 0, void 0, function () {
-    var url, response;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                url = "".concat(auth_1.API_URL).concat(endpoint);
-                console.log(url);
-                return [4 /*yield*/, (0, node_fetch_1.default)(url, request)];
-            case 1:
-                response = _a.sent();
-                if (!response.ok) {
-                    console.log("HTTP error! status: ".concat(response.status, " ").concat(response.statusText));
-                }
-                return [4 /*yield*/, response.json()];
-            case 2: return [2 /*return*/, _a.sent()];
-        }
+exports.parseCSV = void 0;
+var fs_1 = __importDefault(require("fs"));
+var csv_parser_1 = __importDefault(require("csv-parser"));
+function parseCSV(fileName) {
+    return __awaiter(this, void 0, void 0, function () {
+        var csvUsers;
+        return __generator(this, function (_a) {
+            csvUsers = [];
+            fs_1.default.createReadStream(fileName)
+                .on('error', function () {
+                throw new Error('File not found');
+            })
+                .pipe((0, csv_parser_1.default)())
+                .on('data', function (data) {
+                csvUsers.push(data);
+            })
+                .on('error', function (error) {
+                console.log(error.message);
+            })
+                .on('end', function () {
+                console.log(csvUsers);
+                console.log("Processed ".concat(csvUsers.length, " successfully"));
+            });
+            return [2 /*return*/, csvUsers];
+        });
     });
-}); };
-exports.fetchRequest = fetchRequest;
-var postRequest = function (authorizationHeaders, endpoint, body) { return __awaiter(void 0, void 0, void 0, function () {
-    var method, request;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                method = 'POST';
-                request = (0, exports.mergeRequest)((0, exports.initRequest)(method, authorizationHeaders), body);
-                return [4 /*yield*/, (0, exports.fetchRequest)(endpoint, request)];
-            case 1: return [2 /*return*/, _a.sent()];
-        }
-    });
-}); };
-exports.postRequest = postRequest;
+}
+exports.parseCSV = parseCSV;

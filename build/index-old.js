@@ -1,15 +1,4 @@
 "use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -50,45 +39,34 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.postRequest = exports.fetchRequest = exports.mergeRequest = exports.initRequest = void 0;
-var node_fetch_1 = __importDefault(require("node-fetch"));
-var auth_1 = require("./auth");
-var initRequest = function (method, authorizationHeaders) { return ({
-    method: method,
-    headers: authorizationHeaders
-}); };
-exports.initRequest = initRequest;
-var mergeRequest = function (baseObj, objToSync) { return (__assign(__assign({}, baseObj), { body: JSON.stringify(objToSync) })); };
-exports.mergeRequest = mergeRequest;
-var fetchRequest = function (endpoint, request) { return __awaiter(void 0, void 0, void 0, function () {
-    var url, response;
+var config_1 = require("./config/config");
+var auth_1 = require("./utils/auth");
+var role_1 = require("./utils/role");
+var collect_js_1 = __importDefault(require("collect.js"));
+var readAndParse = function (fileName) { return __awaiter(void 0, void 0, void 0, function () {
+    var tokens, csrfToken, headers, updatedRoles;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0:
-                url = "".concat(auth_1.API_URL).concat(endpoint);
-                console.log(url);
-                return [4 /*yield*/, (0, node_fetch_1.default)(url, request)];
+            case 0: return [4 /*yield*/, (0, auth_1.loginResult)()];
             case 1:
-                response = _a.sent();
-                if (!response.ok) {
-                    console.log("HTTP error! status: ".concat(response.status, " ").concat(response.statusText));
-                }
-                return [4 /*yield*/, response.json()];
-            case 2: return [2 /*return*/, _a.sent()];
+                tokens = _a.sent();
+                return [4 /*yield*/, (0, auth_1.getCSRFToken)(tokens.bearerToken)];
+            case 2:
+                csrfToken = _a.sent();
+                headers = (0, auth_1.getFormattedHeaders)(tokens.bearerToken, csrfToken, tokens.cookie);
+                return [4 /*yield*/, (0, role_1.updateRolePermissions)(headers)];
+            case 3:
+                updatedRoles = _a.sent();
+                console.log("Updated ".concat(updatedRoles.length, " roles"));
+                return [2 /*return*/];
         }
     });
 }); };
-exports.fetchRequest = fetchRequest;
-var postRequest = function (authorizationHeaders, endpoint, body) { return __awaiter(void 0, void 0, void 0, function () {
-    var method, request;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                method = 'POST';
-                request = (0, exports.mergeRequest)((0, exports.initRequest)(method, authorizationHeaders), body);
-                return [4 /*yield*/, (0, exports.fetchRequest)(endpoint, request)];
-            case 1: return [2 /*return*/, _a.sent()];
-        }
-    });
-}); };
-exports.postRequest = postRequest;
+function printErrorList(errorList) {
+    var list = (0, collect_js_1.default)(errorList);
+    console.log("Errors: ".concat(list.count()));
+    console.log(list.toJson());
+    console.log('Exiting...');
+    process.exit();
+}
+readAndParse(config_1.DATA_FILE_PATH);

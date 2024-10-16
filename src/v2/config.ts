@@ -19,7 +19,7 @@ export const SUPERSET = {
   trustSelfSigned: true,
 };
 
-export const DATA_FILE_PATH = getEnvironmentVariable('DATA_FILE_PATH', 'src/makadara.csv');
+export const DATA_FILE_PATH = getEnvironmentVariable('DATA_FILE_PATH', 'src/wundanyi.csv');
 
 function getEnvironmentVariable(env: string, def: string) {
   return process.env[env] ?? def;

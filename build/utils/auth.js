@@ -35,78 +35,85 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getFormattedHeaders = exports.getCookie = exports.getCSRFToken = exports.getBearerToken = void 0;
-var fetch = require('node-fetch');
-var getBearerToken = function (apiUrl, body) { return __awaiter(void 0, void 0, void 0, function () {
-    var response, data;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0: return [4 /*yield*/, fetch("".concat(apiUrl, "/security/login"), {
-                    method: 'post',
-                    body: JSON.stringify(body),
-                    headers: { 'Content-Type': 'application/json' }
-                })];
+exports.getFormattedHeaders = exports.getCSRFToken = exports.loginResult = exports.API_URL = void 0;
+var config_1 = require("../config/config");
+var node_fetch_1 = __importDefault(require("node-fetch"));
+var url_1 = require("./url");
+exports.API_URL = (0, url_1.resolveUrl)(config_1.SUPERSET.baseURL, config_1.SUPERSET.apiPath);
+// Helper function to handle fetch requests and return both json and headers
+function fetchFromAPI(endpoint, options) {
+    return __awaiter(this, void 0, void 0, function () {
+        var response, json, error_1;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 3, , 4]);
+                    return [4 /*yield*/, (0, node_fetch_1.default)(endpoint, options)];
+                case 1:
+                    response = _a.sent();
+                    if (!response.ok) {
+                        throw new Error("HTTP error! status: ".concat(response.status));
+                    }
+                    return [4 /*yield*/, response.json()];
+                case 2:
+                    json = _a.sent();
+                    return [2 /*return*/, { json: json, headers: response.headers }];
+                case 3:
+                    error_1 = _a.sent();
+                    console.error('Fetching error:', error_1);
+                    throw error_1;
+                case 4: return [2 /*return*/];
+            }
+        });
+    });
+}
+var loginResult = function () { return __awaiter(void 0, void 0, void 0, function () {
+    var body, _a, json, headers, cookie;
+    var _b;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0:
+                body = {
+                    username: config_1.SUPERSET.username,
+                    password: config_1.SUPERSET.password,
+                    provider: "db"
+                };
+                return [4 /*yield*/, fetchFromAPI("".concat(exports.API_URL, "/security/login"), {
+                        method: 'POST',
+                        body: JSON.stringify(body),
+                        headers: { 'Content-Type': 'application/json' }
+                    })];
             case 1:
-                response = _a.sent();
-                return [4 /*yield*/, response.json()];
-            case 2:
-                data = _a.sent();
-                return [2 /*return*/, data.access_token];
+                _a = _c.sent(), json = _a.json, headers = _a.headers;
+                cookie = (_b = headers.get('Set-Cookie')) !== null && _b !== void 0 ? _b : '';
+                return [2 /*return*/, { bearerToken: json.access_token, cookie: cookie }];
         }
     });
 }); };
-exports.getBearerToken = getBearerToken;
-var getCSRFToken = function (apiUrl, bearerToken) { return __awaiter(void 0, void 0, void 0, function () {
-    var headers, response, data;
+exports.loginResult = loginResult;
+var getCSRFToken = function (bearerToken) { return __awaiter(void 0, void 0, void 0, function () {
+    var headers, data;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 headers = {
-                    Authorization: "Bearer ".concat(bearerToken)
+                    'Authorization': "Bearer ".concat(bearerToken)
                 };
-                return [4 /*yield*/, fetch("".concat(apiUrl, "/security/csrf_token/"), {
-                        method: 'get',
+                return [4 /*yield*/, fetchFromAPI("".concat(exports.API_URL, "/security/csrf_token/"), {
+                        method: 'GET',
                         headers: headers
-                    })];
+                    }).then(function (res) { return res.json; })];
             case 1:
-                response = _a.sent();
-                return [4 /*yield*/, response.json()];
-            case 2:
                 data = _a.sent();
-                ;
                 return [2 /*return*/, data.result];
         }
     });
 }); };
 exports.getCSRFToken = getCSRFToken;
-var getCookie = function (apiUrl, bearerToken, csrfToken) { return __awaiter(void 0, void 0, void 0, function () {
-    var headers, response, data, jsonData, base64Data;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                headers = {
-                    Authorization: "Bearer ".concat(bearerToken),
-                    'X-CSRFToken': csrfToken,
-                };
-                return [4 /*yield*/, fetch("".concat(apiUrl, "/security/me/roles"), {
-                        method: 'get',
-                        headers: headers
-                    })];
-            case 1:
-                response = _a.sent();
-                return [4 /*yield*/, response.json()];
-            case 2:
-                data = _a.sent();
-                console.log(data);
-                jsonData = JSON.stringify({ userId: data.result.userId, role: Object.keys(data.result.roles).toString() });
-                console.log(jsonData);
-                base64Data = Buffer.from(jsonData).toString('base64');
-                return [2 /*return*/, "session=".concat(base64Data)];
-        }
-    });
-}); };
-exports.getCookie = getCookie;
 var getFormattedHeaders = function (bearerToken, csrfToken, cookie) { return ({
     'Authorization': "Bearer ".concat(bearerToken),
     'Content-Type': 'application/json',
