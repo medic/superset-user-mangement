@@ -14,8 +14,6 @@ export class AuthService {
   }
 
   public async login(): Promise<{ bearerToken: string, cookie: string }> {
-    console.log('We are about to log in');
-
     const body: LoginRequest = {
       username: SUPERSET.username,
       password: SUPERSET.password,
@@ -55,11 +53,10 @@ export class AuthService {
   public async getHeaders(){
     try {
       const tokens = await this.login();
-      console.log(`Login complete with result: ${tokens.bearerToken}`);
+      console.log(`Login successful`);
   
       const csrfToken = await this.getCSRFToken(tokens.bearerToken);
-      console.log(`CSRF complete with result: ${csrfToken}`);
-  
+     
       return this.getFormattedHeaders(tokens.bearerToken, csrfToken, tokens.cookie);
     } catch (error) {
       console.error('Error during getHeaders:', error);
@@ -68,13 +65,9 @@ export class AuthService {
   }
 
   private async fetchWithHeaders(endpoint: string, options: RequestInit): Promise<{ json: any, headers: Headers }> {
-    console.log("We are fetching with headers");
-    console.log(endpoint);
-
     try {
       const response = await fetch(endpoint, options);
 
-      console.log('We have a result')
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

@@ -13,9 +13,9 @@ export interface Permission {
 }
 
 export interface UpdateResult {
-  result: MenuIds;
+  result: PermissionIds;
 }
 
-export interface MenuIds {
+export interface PermissionIds {
   permission_view_menu_ids: number[];
 }

@@ -4,9 +4,9 @@
 
 import rison from 'rison';
 import { RequestInit } from 'node-fetch';
-import { chaPermissionList, PermissionService } from './permission-service';
+import { PermissionService } from './permission-service';
 import { SupersetRole, RoleList, ParsedRole } from './role.model';
-import { MenuIds } from './permission.model';
+import { PermissionIds } from './permission.model';
 import { AuthService } from './auth-service';
 import { RoleStore } from './role-store';
 import { RoleAdapter } from './role-adapter';
@@ -77,14 +77,14 @@ export class RoleService {
   /**
    * Update role permissions on Superset in batches of 150
    */
-  public async updateRolePermissions(roles: SupersetRole[]) {
+  public async updateRolePermissions(roles: SupersetRole[], permissionIds: number[]) {
     const headers = await this.initHeaders();
 
     const permissionManager = new PermissionService(headers);
 
     const updatedRoles: number[] = [];
-    const ids: MenuIds = {
-      permission_view_menu_ids: chaPermissionList,
+    const ids: PermissionIds = {
+      permission_view_menu_ids: permissionIds,
     };
 
     const batchSize = 150;

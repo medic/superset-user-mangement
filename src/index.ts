@@ -4,21 +4,24 @@ import { AuthService } from "./v2/auth-service";
 import { DATA_FILE_PATH } from "./v2/config";
 import { parseCSV } from "./v2/csv-util";
 import { PermissionService } from "./v2/permission-service";
-import { Permission } from "./v2/permission.model";
 import { RoleService } from "./v2/role-service";
 
 /**
  * App entry point
  */
 class App {
-  private authManager: AuthService;
-  private roleManager: RoleService;
+  private authService: AuthService;
+  private roleService: RoleService;
   private filePath: string;
 
   constructor(filePath: string) {
-    this.authManager = new AuthService();
-    this.roleManager = new RoleService();
+    this.authService = new AuthService();
+    this.roleService = new RoleService();
     this.filePath = filePath;
+  }
+
+  async login(){
+    this.authService.login()
   }
 
   /**
@@ -36,21 +39,31 @@ class App {
    * Fetch roles from Superset and update list stored in Redis
    */
   public async updateLocalRoles() {
-    const fetchedRoles = await this.roleManager.fetchSupersetRoles();
+    const fetchedRoles = await this.roleService.fetchSupersetRoles();
     console.log(`Fetched ${fetchedRoles.length} roles from Superset}`);
 
-    await this.roleManager.saveSupersetRoles(fetchedRoles);
+    await this.roleService.saveSupersetRoles(fetchedRoles);
   }
 
   public async matchUsersToRoles() {
     const users = await this.readUsersFromCSV();
-    this.roleManager.matchRolesToUsers(users);
+    this.roleService.matchRolesToUsers(users);
+  }
+
+  async fetchBasePermissions(){
+    const headers = await this.authService.getHeaders()
+    
+    const permService = new PermissionService(headers);
+    const permissions = await permService.getPermissionsByRoleId();
+
+    console.log(permissions)
   }
 
 }
 
 const app = new App(DATA_FILE_PATH);
-app.matchUsersToRoles();
+app.fetchBasePermissions();
+// app.matchUsersToRoles();
 // app.updateLocalRoles();
 // const users = app.readUsersFromCSV();
 // console.table(users)
