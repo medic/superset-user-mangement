@@ -8,35 +8,23 @@ import { PermissionService } from './permission-service';
 import { SupersetRole, RoleList, ParsedRole } from './role.model';
 import { PermissionIds } from './permission.model';
 import { AuthService } from './auth-service';
-import { RoleStore } from './role-store';
+import { RoleRepository } from './role-repository';
 import { RoleAdapter } from './role-adapter';
 import { CSVUser } from './user.model';
 
 export class RoleService {
-  private authManager: AuthService;
-  private roleStore: RoleStore;
-  private roleAdapter: RoleAdapter;
-  private headers: any;
-
-  constructor() {
-    this.authManager = new AuthService();
-    this.roleStore = new RoleStore();
-    this.roleAdapter = new RoleAdapter();
-    this.headers = null;
-  }
-
-  private async initHeaders() {
-    if (!this.headers) {
-      console.log('Initializing headers');
-      this.headers = await this.authManager.getHeaders();
-    }
-  }
+  
+  constructor(
+    private authService: AuthService = new AuthService(),
+    private roleStore: RoleRepository = new RoleRepository(),
+    private roleAdapter: RoleAdapter = new RoleAdapter(),
+  ) {}
 
   /**
    * Fetches Superset Roles by page
    */
   public async fetchSupersetRoles() {
-    await this.initHeaders();
+    const headers = await this.authService.getHeaders();
 
     console.log('Headers fetched successfully');
 
@@ -45,12 +33,12 @@ export class RoleService {
 
     const request: RequestInit = {
       method: 'GET',
-      headers: this.headers,
+      headers: headers,
     };
 
     while (true) {
       const queryParams = rison.encode({ page: currentPage, page_size: 100 });
-      const roleList: RoleList = (await this.authManager.fetchRequest(
+      const roleList: RoleList = (await this.authService.fetchRequest(
         `/security/roles?q=${queryParams}`,
         request,
       )) as RoleList;
@@ -77,8 +65,11 @@ export class RoleService {
   /**
    * Update role permissions on Superset in batches of 150
    */
-  public async updateRolePermissions(roles: SupersetRole[], permissionIds: number[]) {
-    const headers = await this.initHeaders();
+  public async updateRolePermissions(
+    roles: SupersetRole[],
+    permissionIds: number[],
+  ) {
+    const headers = await this.authService.getHeaders();
 
     const permissionManager = new PermissionService(headers);
 
@@ -119,15 +110,17 @@ export class RoleService {
   }
 
   private getRoles(chuCodes: string, roles: ParsedRole[]): SupersetRole[] {
-    console.log(`${roles.length} roles available`)
-    
+    console.log(`${roles.length} roles available`);
+
     const codes = chuCodes.split(',').map((code) => code.trim());
 
     const supersetRoles = codes.flatMap((code) => {
       console.log(code);
 
-      return roles.filter((role) => role.code === code).map((role) => role.role);
-    })
+      return roles
+        .filter((role) => role.code === code)
+        .map((role) => role.role);
+    });
 
     return supersetRoles;
   }

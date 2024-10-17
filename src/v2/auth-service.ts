@@ -2,69 +2,90 @@
  * Authentication helper functions
  */
 
-import { LoginRequest, LoginResponse, CSRFResponse } from "./auth.model";
-import { SUPERSET } from "./config";
+import { LoginRequest, LoginResponse, CSRFResponse } from './auth.model';
+import { SUPERSET } from './config';
 import fetch, { Headers, RequestInit } from 'node-fetch';
 
 export class AuthService {
+  private headers: any;
 
   private getApiUrl = (): string => {
     const url = new URL(SUPERSET.apiPath, SUPERSET.baseURL);
-    return url.toString()
-  }
+    return url.toString();
+  };
 
-  public async login(): Promise<{ bearerToken: string, cookie: string }> {
+  public async login(): Promise<{ bearerToken: string; cookie: string }> {
     const body: LoginRequest = {
       username: SUPERSET.username,
       password: SUPERSET.password,
-      provider: "db"
+      provider: 'db',
     };
-  
-    const { json, headers }: { json: LoginResponse, headers: Headers } = await this.fetchWithHeaders(`${this.getApiUrl()}/security/login`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-      headers: { 'Content-Type': 'application/json' }
-    });
-  
+
+    const { json, headers }: { json: LoginResponse; headers: Headers } =
+      await this.fetchWithHeaders(`${this.getApiUrl()}/security/login`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
     const cookie = headers.get('Set-Cookie') ?? '';
     return { bearerToken: json.access_token, cookie };
-  };
+  }
 
   private getCSRFToken = async (bearerToken: string): Promise<string> => {
     const headers = {
-      'Authorization': `Bearer ${bearerToken}`
+      Authorization: `Bearer ${bearerToken}`,
     };
-  
-    const data: CSRFResponse = await this.fetchWithHeaders(`${this.getApiUrl()}/security/csrf_token/`, {
-      method: 'GET',
-      headers: headers
-    }).then(res => res.json);
-  
+
+    const data: CSRFResponse = await this.fetchWithHeaders(
+      `${this.getApiUrl()}/security/csrf_token/`,
+      {
+        method: 'GET',
+        headers: headers,
+      },
+    ).then((res) => res.json);
+
     return data.result;
   };
 
-  private getFormattedHeaders = (bearerToken: string, csrfToken: string, cookie: string) => ({
-    'Authorization': `Bearer ${bearerToken}`,
+  private getFormattedHeaders = (
+    bearerToken: string,
+    csrfToken: string,
+    cookie: string,
+  ) => ({
+    Authorization: `Bearer ${bearerToken}`,
     'Content-Type': 'application/json',
     'X-CSRFToken': csrfToken,
-    'Cookie': cookie
+    Cookie: cookie,
   });
 
-  public async getHeaders(){
-    try {
-      const tokens = await this.login();
-      console.log(`Login successful`);
+  public async getHeaders() {
+    if (!this.headers) {
+      try {
+        const tokens = await this.login();
+        console.log(`Login successful`);
   
-      const csrfToken = await this.getCSRFToken(tokens.bearerToken);
-     
-      return this.getFormattedHeaders(tokens.bearerToken, csrfToken, tokens.cookie);
-    } catch (error) {
-      console.error('Error during getHeaders:', error);
-      throw error;
+        const csrfToken = await this.getCSRFToken(tokens.bearerToken);
+  
+        this.headers = this.getFormattedHeaders(
+          tokens.bearerToken,
+          csrfToken,
+          tokens.cookie,
+        );
+        return this.headers; 
+      } catch (error) {
+        console.error('Error during getHeaders:', error);
+        throw error; 
+      }
+    } else {
+      return this.headers; // Return cached headers if already set
     }
   }
 
-  private async fetchWithHeaders(endpoint: string, options: RequestInit): Promise<{ json: any, headers: Headers }> {
+  private async fetchWithHeaders(
+    endpoint: string,
+    options: RequestInit,
+  ): Promise<{ json: any; headers: Headers }> {
     try {
       const response = await fetch(endpoint, options);
 
@@ -79,13 +100,18 @@ export class AuthService {
     }
   }
 
-  public async fetchRequest(endpoint: string, request: RequestInit): Promise<any> {
+  public async fetchRequest(
+    endpoint: string,
+    request: RequestInit,
+  ): Promise<any> {
     const url = `${this.getApiUrl()}${endpoint}`;
     console.log(url);
 
     const response = await fetch(url, request);
     if (!response.ok) {
-      console.log(`HTTP error! status: ${response.status} ${response.statusText}`);
+      console.log(
+        `HTTP error! status: ${response.status} ${response.statusText}`,
+      );
     }
     return await response.json();
   }

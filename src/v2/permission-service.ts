@@ -7,15 +7,9 @@ import { PermissionList, PermissionIds, UpdateResult, Permission } from './permi
 import { AuthService } from './auth-service';
 
 export class PermissionService {
-  private headers: any;
-  private authManager: AuthService;
-
   private DEFAULT_ROLE: number = 174;
 
-  constructor(headers: any) {
-    this.authManager = new AuthService();
-    this.headers = headers;
-  }
+  constructor(private authService: AuthService = new AuthService()) {}
 
   /**
    * Fetch permissions for a given role from Superset by roleId
@@ -25,13 +19,15 @@ export class PermissionService {
   public async getPermissionsByRoleId(
     roleId: number = this.DEFAULT_ROLE,
   ): Promise<number[]> {
+    const headers = await this.authService.getHeaders();
+
     const request: RequestInit = {
       method: 'GET',
-      headers: this.headers,
+      headers: headers,
     };
 
     try {
-      const permissionList =  (await this.authManager.fetchRequest(
+      const permissionList =  (await this.authService.fetchRequest(
         `/security/roles/${roleId}/permissions/`,
         request,
       )) as PermissionList
@@ -53,14 +49,16 @@ export class PermissionService {
     roleId: number,
     menuIds: PermissionIds,
   ): Promise<UpdateResult> {
+    const headers = await this.authService.getHeaders();
+
     const request: RequestInit = {
       method: 'POST',
-      headers: this.headers,
+      headers: headers,
       body: JSON.stringify(menuIds),
     };
 
     try {
-      return (await this.authManager.fetchRequest(
+      return (await this.authService.fetchRequest(
         `/security/roles/${roleId}/permissions`,
         request,
       )) as UpdateResult;

@@ -51,9 +51,7 @@ class App {
   }
 
   async fetchBasePermissions(){
-    const headers = await this.authService.getHeaders()
-    
-    const permService = new PermissionService(headers);
+    const permService = new PermissionService();
     const permissions = await permService.getPermissionsByRoleId();
 
     console.log(permissions)

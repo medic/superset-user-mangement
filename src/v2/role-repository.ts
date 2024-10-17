@@ -7,7 +7,7 @@ import { ParsedRole, SupersetRole } from './role.model';
 import fs from 'fs';
 import csv from 'csv-parser';
 
-export class RoleStore {
+export class RoleRepository {
   private redisClient: RedisClientType;
   private isConnected: Boolean = false;
 
