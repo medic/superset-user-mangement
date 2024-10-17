@@ -3,16 +3,16 @@
  */
 
 import { RequestInit } from "node-fetch";
-import { AuthManager } from "./auth-manager";
+import { AuthService } from "./auth-service";
 import { CSVUser, User } from "./user.model";
 
 export class UserManager {
 
   private headers: any;
-  private authManager: AuthManager;
+  private authManager: AuthService;
 
   constructor() {
-    this.authManager = new AuthManager();
+    this.authManager = new AuthService();
     this.headers = null;
   }
 

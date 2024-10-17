@@ -6,7 +6,7 @@ import { LoginRequest, LoginResponse, CSRFResponse } from "./auth.model";
 import { SUPERSET } from "./config";
 import fetch, { Headers, RequestInit } from 'node-fetch';
 
-export class AuthManager {
+export class AuthService {
 
   private getApiUrl = (): string => {
     const url = new URL(SUPERSET.apiPath, SUPERSET.baseURL);

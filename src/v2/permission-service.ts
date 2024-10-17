@@ -4,7 +4,7 @@
 
 import { RequestInit } from 'node-fetch';
 import { PermissionList, MenuIds, UpdateResult } from './permission.model';
-import { AuthManager } from './auth-manager';
+import { AuthService } from './auth-service';
 
 export const chaPermissionList = [
   3, 7, 9, 11, 15, 22, 23, 30, 32, 41, 42, 43, 44, 45, 46, 47, 48, 50, 52, 53,
@@ -15,12 +15,12 @@ export const chaPermissionList = [
   186, 187, 188, 192, 194, 201, 202, 206, 207, 263, 266, 295, 296, 297, 350,
 ];
 
-export class PermissionManager {
+export class PermissionService {
   private headers: any;
-  private authManager: AuthManager;
+  private authManager: AuthService;
 
   constructor(headers: any) {
-    this.authManager = new AuthManager();
+    this.authManager = new AuthService();
     this.headers = headers;
   }
 

@@ -1,26 +1,31 @@
 
-import { AuthManager } from "./v2/auth-manager";
+import { CSVUser } from "./utils/user";
+import { AuthService } from "./v2/auth-service";
 import { DATA_FILE_PATH } from "./v2/config";
 import { parseCSV } from "./v2/csv-util";
-import { PermissionManager } from "./v2/permission-manager";
+import { PermissionService } from "./v2/permission-service";
 import { Permission } from "./v2/permission.model";
-import { RoleManager } from "./v2/role-manager";
+import { RoleService } from "./v2/role-service";
 
 /**
  * App entry point
  */
 class App {
-  private authManager: AuthManager;
-  private roleManager: RoleManager;
+  private authManager: AuthService;
+  private roleManager: RoleService;
   private filePath: string;
 
   constructor(filePath: string) {
-    this.authManager = new AuthManager();
-    this.roleManager = new RoleManager();
+    this.authManager = new AuthService();
+    this.roleManager = new RoleService();
     this.filePath = filePath;
   }
 
-  public readUsersFromCSV() {
+  /**
+   * Retrieve CHA user data from the CSV
+   * @returns 
+   */
+  public async readUsersFromCSV(): Promise<CSVUser[]> {
     console.log(this.filePath);
 
     const users = parseCSV(this.filePath);
@@ -37,9 +42,15 @@ class App {
     await this.roleManager.saveSupersetRoles(fetchedRoles);
   }
 
+  public async matchUsersToRoles() {
+    const users = await this.readUsersFromCSV();
+    this.roleManager.matchRolesToUsers(users);
+  }
+
 }
 
 const app = new App(DATA_FILE_PATH);
-app.updateLocalRoles();
+app.matchUsersToRoles();
+// app.updateLocalRoles();
 // const users = app.readUsersFromCSV();
 // console.table(users)

@@ -4,21 +4,22 @@
 
 import rison from 'rison';
 import { RequestInit } from 'node-fetch';
-import { chaPermissionList, PermissionManager } from './permission-manager';
-import { SupersetRole, RoleList } from './role.model';
+import { chaPermissionList, PermissionService } from './permission-service';
+import { SupersetRole, RoleList, ParsedRole } from './role.model';
 import { MenuIds } from './permission.model';
-import { AuthManager } from './auth-manager';
+import { AuthService } from './auth-service';
 import { RoleStore } from './role-store';
 import { RoleAdapter } from './role-adapter';
+import { CSVUser } from './user.model';
 
-export class RoleManager {
-  private authManager: AuthManager;
+export class RoleService {
+  private authManager: AuthService;
   private roleStore: RoleStore;
   private roleAdapter: RoleAdapter;
   private headers: any;
 
   constructor() {
-    this.authManager = new AuthManager();
+    this.authManager = new AuthService();
     this.roleStore = new RoleStore();
     this.roleAdapter = new RoleAdapter();
     this.headers = null;
@@ -26,7 +27,7 @@ export class RoleManager {
 
   private async initHeaders() {
     if (!this.headers) {
-      console.log('Initing headers')
+      console.log('Initializing headers');
       this.headers = await this.authManager.getHeaders();
     }
   }
@@ -73,18 +74,13 @@ export class RoleManager {
     return roles;
   }
 
-  public async saveSupersetRoles(roles: SupersetRole[]) {
-    const parsedRoles = await this.roleAdapter.toParsedRole(roles);
-    await this.roleStore.saveRoles(parsedRoles);
-  }
-
   /**
    * Update role permissions on Superset in batches of 150
    */
   public async updateRolePermissions(roles: SupersetRole[]) {
     const headers = await this.initHeaders();
 
-    const permissionManager = new PermissionManager(headers);
+    const permissionManager = new PermissionService(headers);
 
     const updatedRoles: number[] = [];
     const ids: MenuIds = {
@@ -102,5 +98,37 @@ export class RoleManager {
     }
 
     return updatedRoles;
+  }
+
+  public async saveSupersetRoles(roles: SupersetRole[]) {
+    const parsedRoles = await this.roleAdapter.toParsedRole(roles);
+    await this.roleStore.saveRoles(parsedRoles);
+  }
+
+  public async getSavedSupersetRoles(): Promise<ParsedRole[]> {
+    return await this.roleStore.fetchRoles();
+  }
+
+  public async matchRolesToUsers(users: CSVUser[]) {
+    const roles = await this.getSavedSupersetRoles();
+
+    users.forEach((user) => {
+      const res = this.getRoles(user.chu, roles);
+      console.log(`Found ${res.length} roles for ${user.username}}`);
+    });
+  }
+
+  private getRoles(chuCodes: string, roles: ParsedRole[]): SupersetRole[] {
+    console.log(`${roles.length} roles available`)
+    
+    const codes = chuCodes.split(',').map((code) => code.trim());
+
+    const supersetRoles = codes.flatMap((code) => {
+      console.log(code);
+
+      return roles.filter((role) => role.code === code).map((role) => role.role);
+    })
+
+    return supersetRoles;
   }
 }
