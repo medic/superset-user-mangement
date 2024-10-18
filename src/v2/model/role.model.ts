@@ -22,3 +22,10 @@ export interface SupersetRole {
   id: number;
   name: string;
 }
+
+export interface CreateRoleResponse {
+  id: string, 
+  result: {
+    name: string
+  }
+} 

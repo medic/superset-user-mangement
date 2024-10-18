@@ -5,15 +5,15 @@
 import rison from 'rison';
 import { RequestInit } from 'node-fetch';
 import { PermissionService } from './permission-service';
-import { SupersetRole, RoleList, ParsedRole } from '../model/role.model';
+import { SupersetRole, RoleList, ParsedRole, CreateRoleResponse } from '../model/role.model';
 import { PermissionIds } from '../model/permission.model';
 import { AuthService } from './auth-service';
 import { RoleRepository } from '../repository/role-repository';
 import { RoleAdapter } from '../repository/role-adapter';
 import { CSVUser } from '../model/user.model';
+import { API_URL, fetchRequest, fetchWithHeaders } from '../request-util';
 
 export class RoleService {
-  
   constructor(
     private authService: AuthService = new AuthService(),
     private roleStore: RoleRepository = new RoleRepository(),
@@ -38,7 +38,7 @@ export class RoleService {
 
     while (true) {
       const queryParams = rison.encode({ page: currentPage, page_size: 100 });
-      const roleList: RoleList = (await this.authService.fetchRequest(
+      const roleList: RoleList = (await fetchRequest(
         `/security/roles?q=${queryParams}`,
         request,
       )) as RoleList;
@@ -89,6 +89,40 @@ export class RoleService {
     }
 
     return updatedRoles;
+  }
+
+  /**
+   * Create new role on Superset
+   * @param name Role names
+   */
+  async createRoles(names: string[]): Promise<SupersetRole[]> {
+    const headers = await this.authService.getHeaders();
+
+    const createRoleRequest = async (name: string) => {
+      const request: RequestInit = {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ name: name }),
+      };
+
+      return fetchRequest(
+        `${API_URL()}/security/roles`,
+        request,
+      ) as Promise<CreateRoleResponse>;
+    };
+
+    const rolesPromises = names.map((name) =>
+      createRoleRequest(name).catch((error) => {
+        console.error(`Failed to create role ${name}:`, error);
+        throw new Error(error)
+      }),
+    );
+
+    const results = await Promise.all(rolesPromises);
+    return results.filter((result) => result !== null).map(result => ({
+      id: Number(result.id), // Assuming `id` is directly on result
+      name: result.result.name // Assuming `result` is an object containing `name`
+    }));
   }
 
   public async saveSupersetRoles(roles: SupersetRole[]) {

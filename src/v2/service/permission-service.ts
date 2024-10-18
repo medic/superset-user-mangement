@@ -5,6 +5,7 @@
 import { RequestInit } from 'node-fetch';
 import { PermissionList, PermissionIds, UpdateResult, Permission } from '../model/permission.model';
 import { AuthService } from './auth-service';
+import { fetchRequest } from '../request-util';
 
 export class PermissionService {
   private DEFAULT_ROLE: number = 174;
@@ -27,7 +28,7 @@ export class PermissionService {
     };
 
     try {
-      const permissionList =  (await this.authService.fetchRequest(
+      const permissionList =  (await fetchRequest(
         `/security/roles/${roleId}/permissions/`,
         request,
       )) as PermissionList
@@ -58,7 +59,7 @@ export class PermissionService {
     };
 
     try {
-      return (await this.authService.fetchRequest(
+      return (await fetchRequest(
         `/security/roles/${roleId}/permissions`,
         request,
       )) as UpdateResult;
