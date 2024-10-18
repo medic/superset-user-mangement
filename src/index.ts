@@ -1,10 +1,10 @@
 
 import { CSVUser } from "./utils/user";
-import { AuthService } from "./v2/auth-service";
+import { AuthService } from "./v2/service/auth-service";
 import { DATA_FILE_PATH } from "./v2/config";
-import { parseCSV } from "./v2/csv-util";
-import { PermissionService } from "./v2/permission-service";
-import { RoleService } from "./v2/role-service";
+import { parseCSV } from "./v2/repository/csv-util";
+import { PermissionService } from "./v2/service/permission-service";
+import { RoleService } from "./v2/service/role-service";
 
 /**
  * App entry point

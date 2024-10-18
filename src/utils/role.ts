@@ -3,7 +3,6 @@ import { createClient } from 'redis';
 import rison from 'rison';
 import fs from 'fs';
 import csv from 'csv-parser';
-import { CSVUser } from './user';
 import { MenuIds, chaPermissionList, updatePermissions } from './permissions';
 
 interface RoleList {

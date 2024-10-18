@@ -4,7 +4,7 @@
 
 import { RequestInit } from "node-fetch";
 import { AuthService } from "./auth-service";
-import { CSVUser, User } from "./user.model";
+import { CSVUser, User } from "../model/user.model";
 
 export class UserManager {
 

@@ -5,12 +5,12 @@
 import rison from 'rison';
 import { RequestInit } from 'node-fetch';
 import { PermissionService } from './permission-service';
-import { SupersetRole, RoleList, ParsedRole } from './role.model';
-import { PermissionIds } from './permission.model';
+import { SupersetRole, RoleList, ParsedRole } from '../model/role.model';
+import { PermissionIds } from '../model/permission.model';
 import { AuthService } from './auth-service';
-import { RoleRepository } from './role-repository';
-import { RoleAdapter } from './role-adapter';
-import { CSVUser } from './user.model';
+import { RoleRepository } from '../repository/role-repository';
+import { RoleAdapter } from '../repository/role-adapter';
+import { CSVUser } from '../model/user.model';
 
 export class RoleService {
   

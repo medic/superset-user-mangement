@@ -3,7 +3,7 @@
  */
 
 import { RequestInit } from 'node-fetch';
-import { PermissionList, PermissionIds, UpdateResult, Permission } from './permission.model';
+import { PermissionList, PermissionIds, UpdateResult, Permission } from '../model/permission.model';
 import { AuthService } from './auth-service';
 
 export class PermissionService {

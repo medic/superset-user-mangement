@@ -4,7 +4,7 @@
 
 import fs from "fs";
 import csv from "csv-parser";
-import { CSVUser } from "./user.model";
+import { CSVUser } from "../model/user.model";
 
 export async function parseCSV(fileName: string): Promise<CSVUser[]> {
   let csvUsers: CSVUser[] = []

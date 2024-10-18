@@ -2,8 +2,8 @@
  * Authentication helper functions
  */
 
-import { LoginRequest, LoginResponse, CSRFResponse } from './auth.model';
-import { SUPERSET } from './config';
+import { LoginRequest, LoginResponse, CSRFResponse } from '../model/auth.model';
+import { SUPERSET } from '../config';
 import fetch, { Headers, RequestInit } from 'node-fetch';
 
 export class AuthService {

@@ -6,9 +6,7 @@ import { AuthService } from "./auth-service";
 
 export class RLSService {
 
-  constructor(private authService: AuthService = new AuthService()) {
-
-  }
+  constructor(private authService: AuthService = new AuthService()) {}
 
   
 
