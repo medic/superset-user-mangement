@@ -41,5 +41,7 @@ export async function fetchRequest(
       `HTTP error! status: ${response.status} ${response.statusText}`,
     );
   }
-  return await response.json();
+  const res =  await response.json();
+  console.log(res);
+  return res;
 }

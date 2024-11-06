@@ -1,10 +1,9 @@
-
-import { CSVUser } from "./utils/user";
-import { AuthService } from "./v2/service/auth-service";
-import { DATA_FILE_PATH } from "./v2/config";
-import { parseCSV } from "./v2/repository/csv-util";
-import { PermissionService } from "./v2/service/permission-service";
-import { RoleService } from "./v2/service/role-service";
+import {CSVUser} from "./utils/user";
+import {AuthService} from "./v2/service/auth-service";
+import {DATA_FILE_PATH} from "./v2/config";
+import {parseCSV} from "./v2/repository/csv-util";
+import {PermissionService} from "./v2/service/permission-service";
+import {RoleService} from "./v2/service/role-service";
 
 /**
  * App entry point
@@ -12,7 +11,7 @@ import { RoleService } from "./v2/service/role-service";
 class App {
   private authService: AuthService;
   private roleService: RoleService;
-  private filePath: string;
+  private readonly filePath: string;
 
   constructor(filePath: string) {
     this.authService = new AuthService();
@@ -21,18 +20,17 @@ class App {
   }
 
   async login(){
-    this.authService.login()
+    await this.authService.login()
   }
 
   /**
    * Retrieve CHA user data from the CSV
-   * @returns 
+   * @returns
    */
   public async readUsersFromCSV(): Promise<CSVUser[]> {
     console.log(this.filePath);
 
-    const users = parseCSV(this.filePath);
-    return users;
+    return parseCSV(this.filePath);
   }
 
   /**
@@ -47,21 +45,33 @@ class App {
 
   public async matchUsersToRoles() {
     const users = await this.readUsersFromCSV();
-    this.roleService.matchRolesToUsers(users);
+    await this.roleService.matchRolesToUsers(users);
   }
 
   async fetchBasePermissions(){
     const permService = new PermissionService();
-    const permissions = await permService.getPermissionsByRoleId();
-
-    console.log(permissions)
+    return await permService.getPermissionsByRoleId();
   }
 
+  async createBaseRole() {
+    // const permissions = await this.fetchBasePermissions();
+    // console.log(`We have ${permissions.length} permissions`)
+
+    const role = await this.roleService.createRoles(['Base CHA Role'])
+    console.log(`Role creation result`);
+    console.log(role)
+
+    // if((!role || role.length === 0) || !permissions) return;
+    // const updateRole = await this.roleService.updateRolePermissions(role, permissions)
+    // console.log(`Updated role ${updateRole}`)
+
+    return role;
+  }
 }
 
 const app = new App(DATA_FILE_PATH);
-app.fetchBasePermissions();
-// app.matchUsersToRoles();
+app.createBaseRole()
+// app.fetchBasePermissions().then((list) => console.log(list));
 // app.updateLocalRoles();
 // const users = app.readUsersFromCSV();
 // console.table(users)

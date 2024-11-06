@@ -5,22 +5,11 @@
 import { RequestInit } from "node-fetch";
 import { AuthService } from "./auth-service";
 import { CSVUser, User } from "../model/user.model";
+import {fetchRequest} from "../request-util";
 
 export class UserManager {
 
-  private headers: any;
-  private authManager: AuthService;
-
-  constructor() {
-    this.authManager = new AuthService();
-    this.headers = null;
-  }
-
-  private async initHeaders() {
-    if (!this.headers) {
-      this.headers = await this.authManager.getHeaders();
-    }
-  }
+  constructor(private readonly authService: AuthService = new AuthService()) {}
 
   private generateSupersetUser(csvUser: CSVUser, roles: number[]): User {
     const { first_name, last_name, email, username, password } = csvUser;
@@ -37,21 +26,21 @@ export class UserManager {
   }
 
   public async createUserOnSuperset(users: User[]){
-    await this.initHeaders();
+    const headers = this.authService.getHeaders();
 
     for (const user of users){
-      const response = await this.authManager.fetchRequest(
+      const response = await fetchRequest(
         `/security/users/`,
-        this.generateRequest(user)
+        this.generateRequest(user, headers)
       );
       console.log(response);
     }
   }
 
-  private generateRequest(user: User) {
+  private generateRequest(user: User, headers: any) {
     const request: RequestInit = {
       method: 'POST',
-      headers: this.headers,
+      headers: headers,
       body: JSON.stringify(user),
     };
 

@@ -2,14 +2,14 @@
  * Helper class to save convert, save and retrieve roles from Redis.
  */
 
-import { createClient, RedisClientType } from 'redis';
-import { ParsedRole, SupersetRole } from '../model/role.model';
-import fs from 'fs';
-import csv from 'csv-parser';
+import {createClient, RedisClientType} from "redis";
+import {ParsedRole, SupersetRole} from "../model/role.model";
+import fs from "fs";
+import csv from "csv-parser";
 
 export class RoleRepository {
-  private redisClient: RedisClientType;
-  private isConnected: Boolean = false;
+  private readonly redisClient: RedisClientType;
+  private isConnected: boolean = false;
 
   constructor() {
     this.redisClient = createClient();
@@ -102,8 +102,7 @@ export class RoleRepository {
     if (roleString) {
       // Type guard to ensure roleString is not undefined
       try {
-        const role: SupersetRole = JSON.parse(roleString);
-        return role;
+        return JSON.parse(roleString);
       } catch (error) {
         console.error('Error parsing JSON string:', error);
         return undefined;

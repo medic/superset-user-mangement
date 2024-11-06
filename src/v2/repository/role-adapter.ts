@@ -5,13 +5,12 @@
 import { SupersetRole, ParsedRole } from '../model/role.model';
 
 export class RoleAdapter {
-  constructor() {}
 
   /**
-   * Converts SupersetRole into ParsedRole after extraction of CHU Code
-   * @param SupersetRole
-   * @returns @param ParsedRole
-   */
+     * Converts SupersetRole into ParsedRole after extraction of CHU Code
+     * @returns
+     * @param supersetRoles
+     */
   public async toParsedRole(supersetRoles: SupersetRole[]) {
     const parsedRoles: ParsedRole[] = [];
 
@@ -68,7 +67,7 @@ export class RoleAdapter {
    *
    * @param roles fetched SupersetRoles
    * @param searchString 6 digit chu code as reported by CHA
-   * @returns Roles matching the 6 digit code provided
+   * @returns Roles matching the 6-digit code provided
    */
   public filterCHARoles(
     roles: SupersetRole[],

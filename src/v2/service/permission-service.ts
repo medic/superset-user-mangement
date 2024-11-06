@@ -8,14 +8,14 @@ import { AuthService } from './auth-service';
 import { fetchRequest } from '../request-util';
 
 export class PermissionService {
-  private DEFAULT_ROLE: number = 174;
+  private readonly DEFAULT_ROLE: number = 174;
 
-  constructor(private authService: AuthService = new AuthService()) {}
+  constructor(private readonly authService: AuthService = new AuthService()) {}
 
   /**
    * Fetch permissions for a given role from Superset by roleId
-   * @param roleID
    * @returns List of the role's permissions
+   * @param roleId ID of role to pull
    */
   public async getPermissionsByRoleId(
     roleId: number = this.DEFAULT_ROLE,
@@ -52,6 +52,8 @@ export class PermissionService {
   ): Promise<UpdateResult> {
     const headers = await this.authService.getHeaders();
 
+    console.log( `Updating permissions for ${roleId} with ${menuIds.permission_view_menu_ids.length} permissions`)
+
     const request: RequestInit = {
       method: 'POST',
       headers: headers,
@@ -69,5 +71,5 @@ export class PermissionService {
     }
   }
 
-  private getPermissionIds = (permissions: Permission[]) => permissions.map((permission) => permission.id)
+  private readonly getPermissionIds = (permissions: Permission[]) => permissions.map((permission) => permission.id)
 }

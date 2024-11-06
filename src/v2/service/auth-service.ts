@@ -28,7 +28,7 @@ export class AuthService {
     return { bearerToken: json.access_token, cookie };
   }
 
-  private getCSRFToken = async (bearerToken: string): Promise<string> => {
+  private readonly getCSRFToken = async (bearerToken: string): Promise<string> => {
     const headers = {
       Authorization: `Bearer ${bearerToken}`,
     };
@@ -44,15 +44,13 @@ export class AuthService {
     return data.result;
   };
 
-  private getFormattedHeaders = (
+  private readonly getFormattedHeaders = (
     bearerToken: string,
     csrfToken: string,
-    cookie: string,
   ) => ({
     Authorization: `Bearer ${bearerToken}`,
     'Content-Type': 'application/json',
-    'X-CSRFToken': csrfToken,
-    Cookie: cookie,
+    // 'X-CSRFToken': csrfToken,
   });
 
   public async getHeaders() {
@@ -66,14 +64,16 @@ export class AuthService {
         this.headers = this.getFormattedHeaders(
           tokens.bearerToken,
           csrfToken,
-          tokens.cookie,
         );
+
+        console.log(this.headers);
         return this.headers;
       } catch (error) {
         console.error('Error during getHeaders:', error);
         throw error;
       }
     } else {
+      console.log(this.headers);
       return this.headers; // Return cached headers if already set
     }
   }

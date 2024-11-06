@@ -2,22 +2,22 @@
  * Class to fetch and manage roles from Superset
  */
 
-import rison from 'rison';
-import { RequestInit } from 'node-fetch';
-import { PermissionService } from './permission-service';
-import { SupersetRole, RoleList, ParsedRole, CreateRoleResponse } from '../model/role.model';
-import { PermissionIds } from '../model/permission.model';
-import { AuthService } from './auth-service';
-import { RoleRepository } from '../repository/role-repository';
-import { RoleAdapter } from '../repository/role-adapter';
-import { CSVUser } from '../model/user.model';
-import { API_URL, fetchRequest, fetchWithHeaders } from '../request-util';
+import rison from "rison";
+import {RequestInit} from "node-fetch";
+import {PermissionService} from "./permission-service";
+import {CreateRoleResponse, ParsedRole, RoleList, SupersetRole,} from "../model/role.model";
+import {PermissionIds} from "../model/permission.model";
+import {AuthService} from "./auth-service";
+import {RoleRepository} from "../repository/role-repository";
+import {RoleAdapter} from "../repository/role-adapter";
+import {CSVUser} from "../model/user.model";
+import {fetchRequest} from "../request-util";
 
 export class RoleService {
   constructor(
-    private authService: AuthService = new AuthService(),
-    private roleStore: RoleRepository = new RoleRepository(),
-    private roleAdapter: RoleAdapter = new RoleAdapter(),
+    private readonly authService: AuthService = new AuthService(),
+    private readonly roleStore: RoleRepository = new RoleRepository(),
+    private readonly roleAdapter: RoleAdapter = new RoleAdapter(),
   ) {}
 
   /**
@@ -69,9 +69,7 @@ export class RoleService {
     roles: SupersetRole[],
     permissionIds: number[],
   ) {
-    const headers = await this.authService.getHeaders();
-
-    const permissionManager = new PermissionService(headers);
+    const permissionManager = new PermissionService();
 
     const updatedRoles: number[] = [];
     const ids: PermissionIds = {
@@ -83,6 +81,8 @@ export class RoleService {
       const batch = roles.slice(i, i + batchSize);
 
       for (const role of batch) {
+        if (!role.id) throw Error('No ID provided for role');
+
         await permissionManager.updatePermissions(role.id, ids);
         updatedRoles.push(role.id);
       }
@@ -93,7 +93,7 @@ export class RoleService {
 
   /**
    * Create new role on Superset
-   * @param name Role names
+   * @param names
    */
   async createRoles(names: string[]): Promise<SupersetRole[]> {
     const headers = await this.authService.getHeaders();
@@ -101,28 +101,39 @@ export class RoleService {
     const createRoleRequest = async (name: string) => {
       const request: RequestInit = {
         method: 'POST',
-        headers: headers,
+        headers: {
+          ...headers,
+          'Accept': 'application/json' // Ensure to set Content-Type as application/json
+        },
         body: JSON.stringify({ name: name }),
       };
 
-      return fetchRequest(
-        `${API_URL()}/security/roles`,
+      console.log(`Creating role ${request.body}`);
+
+      return (await fetchRequest(
+        `/security/roles/`,
         request,
-      ) as Promise<CreateRoleResponse>;
+      )) as CreateRoleResponse;
     };
 
     const rolesPromises = names.map((name) =>
       createRoleRequest(name).catch((error) => {
         console.error(`Failed to create role ${name}:`, error);
-        throw new Error(error)
+        throw new Error(error);
       }),
     );
 
     const results = await Promise.all(rolesPromises);
-    return results.filter((result) => result !== null).map(result => ({
-      id: Number(result.id), // Assuming `id` is directly on result
-      name: result.result.name // Assuming `result` is an object containing `name`
-    }));
+    return results
+      .filter((result) => result !== null)
+      .map((result) => {
+        
+
+        return {
+          id: Number(result.id), // Assuming `id` is directly on result
+          name: result.result.name, // Assuming `result` is an object containing `name`
+        };
+      });
   }
 
   public async saveSupersetRoles(roles: SupersetRole[]) {
@@ -148,14 +159,12 @@ export class RoleService {
 
     const codes = chuCodes.split(',').map((code) => code.trim());
 
-    const supersetRoles = codes.flatMap((code) => {
+    return codes.flatMap((code) => {
       console.log(code);
 
       return roles
         .filter((role) => role.code === code)
         .map((role) => role.role);
     });
-
-    return supersetRoles;
   }
 }

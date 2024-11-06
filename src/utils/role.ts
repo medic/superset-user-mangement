@@ -1,9 +1,9 @@
-import { fetchRequest, initRequest } from './superset';
-import { createClient } from 'redis';
-import rison from 'rison';
-import fs from 'fs';
-import csv from 'csv-parser';
-import { MenuIds, chaPermissionList, updatePermissions } from './permissions';
+import {fetchRequest, initRequest} from "./superset";
+import {createClient} from "redis";
+import rison from "rison";
+import fs from "fs";
+import csv from "csv-parser";
+import {chaPermissionList, MenuIds, updatePermissions} from "./permissions";
 
 interface RoleList {
   count: number;
@@ -294,8 +294,7 @@ function parseRoleString(
   if (roleString) {
     // Type guard to ensure roleString is not undefined
     try {
-      const role: SupersetRole = JSON.parse(roleString);
-      return role;
+      return JSON.parse(roleString);
     } catch (error) {
       console.error('Error parsing JSON string:', error);
       return undefined;
