@@ -9,8 +9,8 @@ import {RoleService} from "./v2/service/role-service";
  * App entry point
  */
 class App {
-  private authService: AuthService;
-  private roleService: RoleService;
+  private readonly authService: AuthService;
+  private readonly roleService: RoleService;
   private readonly filePath: string;
 
   constructor(filePath: string) {
@@ -54,24 +54,20 @@ class App {
   }
 
   async createBaseRole() {
-    // const permissions = await this.fetchBasePermissions();
-    // console.log(`We have ${permissions.length} permissions`)
+    const permissions = await this.fetchBasePermissions();
+    console.log(`We have ${permissions.length} permissions`)
 
     const role = await this.roleService.createRoles(['Base CHA Role'])
-    console.log(`Role creation result`);
     console.log(role)
 
-    // if((!role || role.length === 0) || !permissions) return;
-    // const updateRole = await this.roleService.updateRolePermissions(role, permissions)
-    // console.log(`Updated role ${updateRole}`)
+    if((!role || role.length === 0) || !permissions) return;
+    const updateRole = await this.roleService.updateRolePermissions(role, permissions)
+    console.log(`Updated role ${updateRole}`)
 
     return role;
   }
 }
 
 const app = new App(DATA_FILE_PATH);
-app.createBaseRole()
-// app.fetchBasePermissions().then((list) => console.log(list));
-// app.updateLocalRoles();
-// const users = app.readUsersFromCSV();
-// console.table(users)
+app.createBaseRole().then((res) => console.log(res))
+

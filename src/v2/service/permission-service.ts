@@ -8,7 +8,7 @@ import { AuthService } from './auth-service';
 import { fetchRequest } from '../request-util';
 
 export class PermissionService {
-  private readonly DEFAULT_ROLE: number = 174;
+  private readonly DEFAULT_ROLE: number = 3412;
 
   constructor(private readonly authService: AuthService = new AuthService()) {}
 
@@ -62,7 +62,7 @@ export class PermissionService {
 
     try {
       return (await fetchRequest(
-        `/security/roles/${roleId}/permissions`,
+        `/security/roles/${roleId}/permissions/`,
         request,
       )) as UpdateResult;
     } catch (error) {
