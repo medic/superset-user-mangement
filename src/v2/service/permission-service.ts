@@ -62,7 +62,7 @@ export class PermissionService {
 
     try {
       return (await fetchRequest(
-        `/security/roles/${roleId}/permissions/`,
+        `/security/roles/${roleId}/permissions`,
         request,
       )) as UpdateResult;
     } catch (error) {

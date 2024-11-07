@@ -15,6 +15,7 @@ export class AuthService {
       username: SUPERSET.username,
       password: SUPERSET.password,
       provider: 'db',
+      refresh: true
     };
 
     const { json, headers }: { json: LoginResponse; headers: Headers } =
@@ -50,31 +51,27 @@ export class AuthService {
   ) => ({
     Authorization: `Bearer ${bearerToken}`,
     'Content-Type': 'application/json',
-    // 'X-CSRFToken': csrfToken,
+    'X-CSRFToken': csrfToken,
   });
 
   public async getHeaders() {
-    if (!this.headers) {
-      try {
-        const tokens = await this.login();
-        console.log(`Login successful`);
+    // Check if headers are already cached
+    if (this.headers) {
+      return this.headers;
+    }
 
-        const csrfToken = await this.getCSRFToken(tokens.bearerToken);
+    try {
+      // Fetch new tokens
+      const tokens = await this.login();
+      const csrfToken = await this.getCSRFToken(tokens.bearerToken);
 
-        this.headers = this.getFormattedHeaders(
-          tokens.bearerToken,
-          csrfToken,
-        );
+      // Set headers once obtained
+      this.headers = this.getFormattedHeaders(tokens.bearerToken, csrfToken);
 
-        console.log(this.headers);
-        return this.headers;
-      } catch (error) {
-        console.error('Error during getHeaders:', error);
-        throw error;
-      }
-    } else {
-      console.log(this.headers);
-      return this.headers; // Return cached headers if already set
+      return this.headers;
+    } catch (error) {
+      console.error('Error during getHeaders:', error);
+      throw error;
     }
   }
 }

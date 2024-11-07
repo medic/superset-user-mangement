@@ -12,6 +12,7 @@ import {RoleRepository} from "../repository/role-repository";
 import {RoleAdapter} from "../repository/role-adapter";
 import {CSVUser} from "../model/user.model";
 import {fetchRequest} from "../request-util";
+import pLimit from 'p-limit';
 
 export class RoleService {
   constructor(
@@ -70,23 +71,22 @@ export class RoleService {
     permissionIds: number[],
   ) {
     const permissionManager = new PermissionService();
-
     const updatedRoles: number[] = [];
     const ids: PermissionIds = {
       permission_view_menu_ids: permissionIds,
     };
 
-    const batchSize = 150;
-    for (let i = 0; i < roles.length; i += batchSize) {
-      const batch = roles.slice(i, i + batchSize);
+    const limit = pLimit(10); // Limit concurrency to 10
+    const updatePromises = roles.map((role) => limit(async () => {
+      if (!role.id)
+        throw new Error('No ID provided for role');
 
-      for (const role of batch) {
-        if (!role.id) throw Error('No ID provided for role');
+      await permissionManager.updatePermissions(role.id, ids);
+      updatedRoles.push(role.id);
+    }));
 
-        await permissionManager.updatePermissions(role.id, ids);
-        updatedRoles.push(role.id);
-      }
-    }
+    await Promise.all(updatePromises);
+    console.log('All roles updated');
 
     return updatedRoles;
   }

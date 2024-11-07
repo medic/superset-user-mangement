@@ -41,7 +41,6 @@ export class RoleRepository {
    * Persist roles in Redis with the CHU code as the key
    * @param roles Formatted version of Superset Role
    */
-
   public async saveRoles(roles: ParsedRole[]) {
     await this.connectRedis();
 

@@ -55,10 +55,8 @@ class App {
 
   async createBaseRole() {
     const permissions = await this.fetchBasePermissions();
-    console.log(`We have ${permissions.length} permissions`)
 
     const role = await this.roleService.createRoles(['Base CHA Role'])
-    console.log(role)
 
     if((!role || role.length === 0) || !permissions) return;
     const updateRole = await this.roleService.updateRolePermissions(role, permissions)
@@ -66,8 +64,19 @@ class App {
 
     return role;
   }
+
+  async updateRolePermissions() {
+    const roles = await this.roleService.getSavedSupersetRoles();
+    console.log(`Fetched ${roles.length} saved roles`)
+
+    const permissions = await this.fetchBasePermissions();
+    console.log(`Fetched ${roles.length} permissions`)
+
+    const supersetRoles = roles.map(role => role.role);
+    return await this.roleService.updateRolePermissions(supersetRoles, permissions);
+  }
 }
 
 const app = new App(DATA_FILE_PATH);
-app.createBaseRole().then((res) => console.log(res))
+app.updateRolePermissions().then((res) => console.log(res));
 
