@@ -2,8 +2,8 @@
  * Helper functions for making network requests
  */
 
-import fetch, { RequestInit, Headers } from "node-fetch";
-import { SUPERSET } from "./config";
+import fetch, {Headers, RequestInit} from "node-fetch";
+import {SUPERSET} from "./config";
 
 export const API_URL = (): string => {
   const url = new URL(SUPERSET.apiPath, SUPERSET.baseURL);
@@ -41,7 +41,5 @@ export async function fetchRequest(
       `HTTP error! status: ${response.status} ${response.statusText}`,
     );
   }
-  const res =  await response.json();
-  console.log(res);
-  return res;
+  return await response.json();
 }

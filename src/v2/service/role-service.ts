@@ -6,20 +6,21 @@ import rison from "rison";
 import {RequestInit} from "node-fetch";
 import {PermissionService} from "./permission-service";
 import {CreateRoleResponse, ParsedRole, RoleList, SupersetRole,} from "../model/role.model";
-import {PermissionIds} from "../model/permission.model";
+import {PermissionIds, UpdateResult} from "../model/permission.model";
 import {AuthService} from "./auth-service";
 import {RoleRepository} from "../repository/role-repository";
 import {RoleAdapter} from "../repository/role-adapter";
 import {CSVUser} from "../model/user.model";
 import {fetchRequest} from "../request-util";
-import pLimit from 'p-limit';
+import pLimit from "p-limit";
 
 export class RoleService {
   constructor(
     private readonly authService: AuthService = new AuthService(),
     private readonly roleStore: RoleRepository = new RoleRepository(),
     private readonly roleAdapter: RoleAdapter = new RoleAdapter(),
-  ) {}
+  ) {
+  }
 
   /**
    * Fetches Superset Roles by page
@@ -27,18 +28,18 @@ export class RoleService {
   public async fetchSupersetRoles() {
     const headers = await this.authService.getHeaders();
 
-    console.log('Headers fetched successfully');
+    console.log("Headers fetched successfully");
 
     let currentPage = 0;
     let roles: SupersetRole[] = [];
 
     const request: RequestInit = {
-      method: 'GET',
+      method: "GET",
       headers: headers,
     };
 
     while (true) {
-      const queryParams = rison.encode({ page: currentPage, page_size: 100 });
+      const queryParams = rison.encode({page: currentPage, page_size: 100});
       const roleList: RoleList = (await fetchRequest(
         `/security/roles?q=${queryParams}`,
         request,
@@ -71,24 +72,60 @@ export class RoleService {
     permissionIds: number[],
   ) {
     const permissionManager = new PermissionService();
-    const updatedRoles: number[] = [];
+    const updatedRoles: Set<number> = new Set(); // To store successfully updated role IDs
     const ids: PermissionIds = {
       permission_view_menu_ids: permissionIds,
     };
 
     const limit = pLimit(10); // Limit concurrency to 10
-    const updatePromises = roles.map((role) => limit(async () => {
-      if (!role.id)
-        throw new Error('No ID provided for role');
 
-      await permissionManager.updatePermissions(role.id, ids);
-      updatedRoles.push(role.id);
-    }));
+    async function retryOperation(operation: { (): Promise<UpdateResult>; (): any; }, roleId: number, retries = 3, delay = 1000, timeout = 10000) {
+      for (let i = 0; i < retries; i++) {
+        try {
+          await withTimeout(operation(), timeout); // Apply timeout to the operation
+          updatedRoles.add(roleId); // Log successful updates
+          return;
+        } catch (err) {
+          if (i === retries - 1) {
+            console.error(`Failed to update role ${roleId} after ${retries} attempts:`);
+            throw err;
+          }
+          console.warn(`Retrying role ${roleId} after failure`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+    }
 
-    await Promise.all(updatePromises);
-    console.log('All roles updated');
+    async function withTimeout(promise: Promise<UpdateResult>, timeout: number | undefined) {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Operation timed out')), timeout)
+      );
+      return Promise.race([promise, timeoutPromise]);
+    }
 
-    return updatedRoles;
+    async function updateRole(role: SupersetRole) {
+      if (!role.id) throw new Error('No ID provided for role');
+      await retryOperation(() => permissionManager.updatePermissions(role.id, ids), role.id);
+    }
+
+    // First attempt to update all roles
+    const updatePromises = roles.map((role) => limit(() => updateRole(role)));
+
+    await Promise.allSettled(updatePromises);
+
+    console.log('Initial update completed. Successful updates:', Array.from(updatedRoles));
+
+    // Identify failed roles
+    const failedRoles = roles.filter(role => !updatedRoles.has(role.id));
+    console.log('Retrying failed roles:', failedRoles.map(role => role.id));
+
+    if (failedRoles.length > 0) {
+      const retryPromises = failedRoles.map((role) => limit(() => updateRole(role)));
+      await Promise.allSettled(retryPromises);
+      console.log('Retry update completed. Final successful updates:', Array.from(updatedRoles));
+    }
+
+    return Array.from(updatedRoles);
   }
 
   /**
@@ -127,7 +164,6 @@ export class RoleService {
     return results
       .filter((result) => result !== null)
       .map((result) => {
-        
 
         return {
           id: Number(result.id), // Assuming `id` is directly on result
@@ -167,4 +203,5 @@ export class RoleService {
         .map((role) => role.role);
     });
   }
+
 }

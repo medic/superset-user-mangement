@@ -11,11 +11,13 @@ import {RoleService} from "./v2/service/role-service";
 class App {
   private readonly authService: AuthService;
   private readonly roleService: RoleService;
+  private readonly permissionService: PermissionService;
   private readonly filePath: string;
 
   constructor(filePath: string) {
     this.authService = new AuthService();
     this.roleService = new RoleService();
+    this.permissionService = new PermissionService();
     this.filePath = filePath;
   }
 
@@ -48,13 +50,8 @@ class App {
     await this.roleService.matchRolesToUsers(users);
   }
 
-  async fetchBasePermissions(){
-    const permService = new PermissionService();
-    return await permService.getPermissionsByRoleId();
-  }
-
   async createBaseRole() {
-    const permissions = await this.fetchBasePermissions();
+    const permissions = await this.permissionService.fetchBasePermissions();
 
     const role = await this.roleService.createRoles(['Base CHA Role'])
 
@@ -69,7 +66,7 @@ class App {
     const roles = await this.roleService.getSavedSupersetRoles();
     console.log(`Fetched ${roles.length} saved roles`)
 
-    const permissions = await this.fetchBasePermissions();
+    const permissions = await this.permissionService.fetchBasePermissions();
     console.log(`Fetched ${roles.length} permissions`)
 
     const supersetRoles = roles.map(role => role.role);

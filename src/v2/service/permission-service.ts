@@ -2,7 +2,7 @@
  * Helper functions for handling role permissions
  */
 
-import { RequestInit } from 'node-fetch';
+import fetch, { RequestInit } from 'node-fetch';
 import { PermissionList, PermissionIds, UpdateResult, Permission } from '../model/permission.model';
 import { AuthService } from './auth-service';
 import { fetchRequest } from '../request-util';
@@ -49,7 +49,7 @@ export class PermissionService {
   public async updatePermissions(
     roleId: number,
     menuIds: PermissionIds,
-  ): Promise<UpdateResult> {
+  ) {
     const headers = await this.authService.getHeaders();
 
     console.log( `Updating permissions for ${roleId} with ${menuIds.permission_view_menu_ids.length} permissions`)
@@ -72,4 +72,24 @@ export class PermissionService {
   }
 
   private readonly getPermissionIds = (permissions: Permission[]) => permissions.map((permission) => permission.id)
+
+  /**
+   * Fetches permissions from the base user. These will be applied to
+   * all other users of the same type.
+   */
+  public async fetchBasePermissions(){
+    const permService = new PermissionService();
+    return await permService.getPermissionsByRoleId();
+  }
+
+  // async updatePermissionsWithTimeout(url, options, timeout = 10000) {
+  //   const controller = new AbortController();
+  //   const id = setTimeout(() => controller.abort(), timeout);
+  //   const response = await fetch(url, {
+  //     ...options,
+  //     signal: controller.signal,
+  //   });
+  //   clearTimeout(id);
+  //   return response;
+  // }
 }
