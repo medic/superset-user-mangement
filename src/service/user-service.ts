@@ -2,10 +2,10 @@
  * Class for handling creation of user accounts on Superset
  */
 
-import { RequestInit } from "node-fetch";
+import { AxiosRequestConfig } from "axios";
 import { AuthService } from "./auth-service";
 import { CSVUser, User } from "../model/user.model";
-import {fetchRequest} from "../request-util";
+import { fetchRequest } from "../request-util";
 
 export class UserManager {
 
@@ -26,7 +26,7 @@ export class UserManager {
   }
 
   public async createUserOnSuperset(users: User[]){
-    const headers = this.authService.getHeaders();
+    const headers = await this.authService.getHeaders();
 
     for (const user of users){
       const response = await fetchRequest(
@@ -37,13 +37,11 @@ export class UserManager {
     }
   }
 
-  private generateRequest(user: User, headers: any) {
-    const request: RequestInit = {
+  private generateRequest(user: User, headers: any): AxiosRequestConfig {
+    return {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify(user),
+      data: user,
     };
-
-    return request;
   }
 }

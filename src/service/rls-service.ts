@@ -3,12 +3,21 @@
  */
 
 import { AuthService } from "./auth-service";
-import { RequestInit } from "node-fetch";
-import rison from "rison";
+import {
+  RLSList,
+  RowLevelSecurity,
+  UpdateRLSRequest,
+  UpdateRLSResponse,
+  UpdateResult,
+} from "../model/rls.model";
 import { fetchRequest } from "../request-util";
-import { RLSList, RowLevelSecurity, UpdateResult, UpdateRLSRequest, UpdateRLSResponse } from "../model/rls.model";
+import { AxiosRequestConfig } from "axios";
+import rison from "rison";
 import { RlsRepository } from "../repository/rls-respository";
 
+/**
+ * Class to manage Row Level Security for Roles
+ */
 export class RLSService {
 
   readonly BASE_RLS_ID = 3051;
@@ -26,7 +35,7 @@ export class RLSService {
 
       while (true) {
         const queryParams = rison.encode({ page: currentPage, page_size: 100 });
-        const request: RequestInit = {
+        const request: AxiosRequestConfig = {
           method: "GET",
           headers: headers,
         };
@@ -88,7 +97,7 @@ export class RLSService {
    */
   async fetchBaseRLS() {
     const headers = await this.authService.getHeaders();
-    const request: RequestInit = {
+    const request: AxiosRequestConfig = {
       method: "GET",
       headers: headers,
     };
@@ -113,12 +122,12 @@ export class RLSService {
   }
 
   /**
- * Updates the tables associated with multiple RLS policies
- * @param tables - Array of table IDs to associate with the policies
- * @param policies - Array of RLS policies to update
- * @returns Promise resolving to an array of update results
- * @throws Error if the update fails
- */
+   * Updates the tables associated with multiple RLS policies
+   * @param tables - Array of table IDs to associate with the policies
+   * @param policies - Array of RLS policies to update
+   * @returns Promise resolving to an array of update results
+   * @throws Error if the update fails
+   */
   async updateRLSTables(tables: number[], policies: RowLevelSecurity[]): Promise<UpdateResult[]> {
     const headers = await this.authService.getHeaders();
     const results: UpdateResult[] = [];
@@ -148,12 +157,16 @@ export class RLSService {
                 tables: tables // Update with new table IDs
               };
 
-              console.log(updateRequest);
+              console.log('Update request:', {
+                url: `/rowlevelsecurity/${policy.id}`,
+                headers: headers,
+                data: updateRequest
+              });
 
-              const request: RequestInit = {
+              const request: AxiosRequestConfig = {
                 method: 'PUT',
                 headers: headers,
-                body: JSON.stringify(updateRequest),
+                data: updateRequest,
               };
 
               const response = await fetchRequest(

@@ -3,15 +3,15 @@
  */
 
 import rison from "rison";
-import {RequestInit} from "node-fetch";
-import {PermissionService} from "./permission-service";
-import {CreateRoleResponse, ParsedRole, RoleList, SupersetRole,} from "../model/role.model";
-import {PermissionIds, UpdateResult} from "../model/permission.model";
-import {AuthService} from "./auth-service";
-import {RoleRepository} from "../repository/role-repository";
-import {RoleAdapter} from "../repository/role-adapter";
-import {CSVUser} from "../model/user.model";
-import {executeWithConcurrency, fetchRequest, retryOperation} from "../request-util";
+import axios, { AxiosRequestConfig } from "axios";
+import { PermissionService } from "./permission-service";
+import { CreateRoleResponse, ParsedRole, RoleList, SupersetRole } from "../model/role.model";
+import { PermissionIds, UpdateResult } from "../model/permission.model";
+import { AuthService } from "./auth-service";
+import { RoleRepository } from "../repository/role-repository";
+import { RoleAdapter } from "../repository/role-adapter";
+import { CSVUser } from "../model/user.model";
+import { executeWithConcurrency, retryOperation } from "../request-util";
 import pLimit from "p-limit";
 
 export class RoleService {
@@ -19,8 +19,7 @@ export class RoleService {
     private readonly authService: AuthService = new AuthService(),
     private readonly roleStore: RoleRepository = new RoleRepository(),
     private readonly roleAdapter: RoleAdapter = new RoleAdapter(),
-  ) {
-  }
+  ) {}
 
   /**
    * Fetches Superset Roles by page
@@ -33,23 +32,21 @@ export class RoleService {
     let currentPage = 0;
     let roles: SupersetRole[] = [];
 
-    const request: RequestInit = {
+    const request: AxiosRequestConfig = {
       method: "GET",
       headers: headers,
     };
 
     while (true) {
-      const queryParams = rison.encode({page: currentPage, page_size: 100});
-      const roleList: RoleList = (await fetchRequest(
-        `/security/roles?q=${queryParams}`,
-        request,
-      )) as RoleList;
+      const queryParams = rison.encode({ page: currentPage, page_size: 100 });
+      const response = await axios(`/security/roles?q=${queryParams}`, request);
+      const roleList: RoleList = response.data as RoleList;
 
       // Append roles from the current page to the allRoles array
       roles = roles.concat(roleList.result);
 
       console.log(`Fetched ${roleList.result.length} roles from page ${currentPage} \n
-        ${roles.length} fetched so far`);
+      ${roles.length} fetched so far`);
 
       // If there are no more roles on the current page, break out of the loop
       if (roleList.result.length === 0) {
@@ -116,21 +113,19 @@ export class RoleService {
     const headers = await this.authService.getHeaders();
 
     const createRoleRequest = async (name: string) => {
-      const request: RequestInit = {
+      const request: AxiosRequestConfig = {
         method: 'POST',
         headers: {
           ...headers,
-          'Accept': 'application/json' // Ensure to set Content-Type as application/json
+          'Accept': 'application/json'
         },
-        body: JSON.stringify({ name: name }),
+        data: { name: name },
       };
 
-      console.log(`Creating role ${request.body}`);
+      console.log(`Creating role ${name}`);
 
-      return (await fetchRequest(
-        `/security/roles/`,
-        request,
-      )) as CreateRoleResponse;
+      const response = await axios(`/security/roles/`, request);
+      return response.data as CreateRoleResponse;
     };
 
     const rolesPromises = names.map((name) =>
@@ -143,13 +138,10 @@ export class RoleService {
     const results = await Promise.all(rolesPromises);
     return results
       .filter((result) => result !== null)
-      .map((result) => {
-
-        return {
-          id: Number(result.id), // Assuming `id` is directly on result
-          name: result.result.name, // Assuming `result` is an object containing `name`
-        };
-      });
+      .map((result) => ({
+        id: Number(result.id),
+        name: result.result.name,
+      }));
   }
 
   public async saveSupersetRoles(roles: SupersetRole[]) {
@@ -183,5 +175,4 @@ export class RoleService {
         .map((role) => role.role);
     });
   }
-
 }

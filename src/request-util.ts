@@ -2,8 +2,8 @@
  * Helper functions for making network requests
  */
 
-import fetch, {Headers, RequestInit} from "node-fetch";
-import {SUPERSET} from "./config";
+import axios, { AxiosRequestConfig } from 'axios';
+import { SUPERSET } from "./config";
 import pLimit from "p-limit";
 
 export const API_URL = (): string => {
@@ -13,16 +13,20 @@ export const API_URL = (): string => {
 
 export async function fetchWithHeaders(
   endpoint: string,
-  options: RequestInit,
-): Promise<{ json: any; headers: Headers }> {
+  options: AxiosRequestConfig,
+): Promise<{ json: any; headers: any }> {
   try {
-    const response = await fetch(endpoint, options);
+    const finalOptions = {
+      ...options,
+      url: endpoint,
+      withCredentials: true
+    };
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const json = await response.json();
-    return { json, headers: response.headers };
+    const response = await axios(finalOptions);
+    return { 
+      json: response.data, 
+      headers: response.headers 
+    };
   } catch (error) {
     console.error('Fetching error:', error);
     throw error;
@@ -31,24 +35,29 @@ export async function fetchWithHeaders(
 
 export async function fetchRequest(
   endpoint: string,
-  request: RequestInit,
+  request: AxiosRequestConfig,
 ): Promise<any> {
   const url = `${API_URL()}${endpoint}`;
-  console.log(url);
+  console.log('Request URL:', url);
+  
+  try {
+    const finalOptions = {
+      ...request,
+      url,
+      withCredentials: true
+    };
 
-  const response = await fetch(url, request);
-  if (!response.ok) {
-    console.log(
-      `HTTP error! status: ${response.status} ${response.statusText}`,
-    );
-    try {
-      const errorBody = await response.clone().text();
-      console.error('Error response body:', errorBody);
-    } catch (e) {
-      console.error('Could not read error response body');
+    const response = await axios(finalOptions);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      console.log(
+        `HTTP error! status: ${error.response.status} ${error.response.statusText}`,
+      );
+      console.error('Error response:', error.response.data);
     }
+    throw error;
   }
-  return await response.json();
 }
 
 /* Retry and timeout utility functions */

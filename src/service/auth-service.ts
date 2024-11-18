@@ -4,8 +4,8 @@
 
 import { LoginRequest, LoginResponse, CSRFResponse } from '../model/auth.model';
 import { SUPERSET } from '../config';
-import { Headers } from 'node-fetch';
-import { API_URL, fetchWithHeaders } from '../request-util';
+import { API_URL } from '../request-util';
+import axios from 'axios';
 
 export class AuthService {
   private headers: any;
@@ -18,31 +18,29 @@ export class AuthService {
       refresh: true
     };
 
-    const { json, headers }: { json: LoginResponse; headers: Headers } =
-      await fetchWithHeaders(`${API_URL()}/security/login`, {
-        method: 'POST',
-        body: JSON.stringify(body),
-        headers: { 'Content-Type': 'application/json' },
-      });
+    const response = await axios.post(`${API_URL()}/security/login`, body, {
+      headers: { 'Content-Type': 'application/json' },
+    });
 
-    const cookie = headers.get('Set-Cookie') ?? '';
-    return { bearerToken: json.access_token, cookie };
+    const cookie = response.headers['set-cookie']?.[0] ?? '';
+    console.log('Login response cookie:', cookie);
+    
+    return { 
+      bearerToken: response.data.access_token,
+      cookie 
+    };
   }
 
   private readonly getCSRFToken = async (bearerToken: string): Promise<string> => {
-    const headers = {
-      Authorization: `Bearer ${bearerToken}`,
-    };
-
-    const data: CSRFResponse = await fetchWithHeaders(
-      `${API_URL()}/security/csrf_token/`,
-      {
-        method: 'GET',
-        headers: headers,
+    const response = await axios.get(`${API_URL()}/security/csrf_token/`, {
+      headers: {
+        Authorization: `Bearer ${bearerToken}`,
+        'X-Request-With': 'XMLHttpRequest'
       },
-    ).then((res) => res.json);
+    });
 
-    return data.result;
+    console.log('CSRF token response:', response.data);
+    return response.data.result;
   };
 
   private readonly getFormattedHeaders = (
@@ -53,6 +51,7 @@ export class AuthService {
     Authorization: `Bearer ${bearerToken}`,
     'Content-Type': 'application/json',
     'X-CSRFToken': csrfToken,
+    'X-Request-With': 'XMLHttpRequest',
     Cookie: cookie,
   });
 
@@ -69,6 +68,7 @@ export class AuthService {
 
       // Set headers once obtained
       this.headers = this.getFormattedHeaders(tokens.bearerToken, csrfToken, tokens.cookie);
+      console.log('Final headers:', this.headers);
 
       return this.headers;
     } catch (error) {
