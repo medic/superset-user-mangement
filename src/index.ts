@@ -1,9 +1,11 @@
-import {CSVUser} from "./utils/user";
-import {AuthService} from "./v2/service/auth-service";
-import {DATA_FILE_PATH} from "./v2/config";
-import {parseCSV} from "./v2/repository/csv-util";
-import {PermissionService} from "./v2/service/permission-service";
-import {RoleService} from "./v2/service/role-service";
+import {CSVUser} from "./model/user.model"
+import {AuthService} from "./service/auth-service";
+import {DATA_FILE_PATH} from "./config";
+import {parseCSV} from "./repository/csv-util";
+import {PermissionService} from "./service/permission-service";
+import {RoleService} from "./service/role-service";
+import {RedisService} from "./repository/redis-util";
+import {RLSService} from "./service/rls-service";
 
 /**
  * App entry point
@@ -12,12 +14,14 @@ class App {
   private readonly authService: AuthService;
   private readonly roleService: RoleService;
   private readonly permissionService: PermissionService;
+  private readonly rlsService: RLSService;
   private readonly filePath: string;
 
   constructor(filePath: string) {
     this.authService = new AuthService();
     this.roleService = new RoleService();
     this.permissionService = new PermissionService();
+    this.rlsService = new RLSService();
     this.filePath = filePath;
   }
 
@@ -72,8 +76,22 @@ class App {
     const supersetRoles = roles.map(role => role.role);
     return await this.roleService.updateRolePermissions(supersetRoles, permissions);
   }
+
+  async fetchCountyRLS()  { 
+    const rls = await this.rlsService.fetchRLSPolicies();
+    console.log(`Fetched ${rls.length} RLSs`)
+    // const baseTables = await this.rlsService.fetchBaseTables();
+    const countyTables = await this.rlsService.filterByGroupKey(rls, 'county_name');
+    console.log(`Fetched ${countyTables.length} county RLSs`);
+
+    return countyTables.length;
+  }
 }
 
 const app = new App(DATA_FILE_PATH);
-app.updateRolePermissions().then((res) => console.log(res));
+app.fetchCountyRLS().then((res) => console.log(res))
 
+process.on('SIGINT', async () => {
+  await RedisService.disconnect();
+  process.exit(0);
+});

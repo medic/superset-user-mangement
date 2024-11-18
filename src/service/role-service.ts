@@ -11,7 +11,7 @@ import {AuthService} from "./auth-service";
 import {RoleRepository} from "../repository/role-repository";
 import {RoleAdapter} from "../repository/role-adapter";
 import {CSVUser} from "../model/user.model";
-import {fetchRequest} from "../request-util";
+import {executeWithConcurrency, fetchRequest, retryOperation} from "../request-util";
 import pLimit from "p-limit";
 
 export class RoleService {
@@ -69,59 +69,39 @@ export class RoleService {
    */
   public async updateRolePermissions(
     roles: SupersetRole[],
-    permissionIds: number[],
+    permissionIds: number[]
   ) {
     const permissionManager = new PermissionService();
-    const updatedRoles: Set<number> = new Set(); // To store successfully updated role IDs
+    const updatedRoles: Set<number> = new Set();
     const ids: PermissionIds = {
       permission_view_menu_ids: permissionIds,
     };
 
-    const limit = pLimit(10); // Limit concurrency to 10
-
-    async function retryOperation(operation: { (): Promise<UpdateResult>; (): any; }, roleId: number, retries = 3, delay = 1000, timeout = 10000) {
-      for (let i = 0; i < retries; i++) {
-        try {
-          await withTimeout(operation(), timeout); // Apply timeout to the operation
-          updatedRoles.add(roleId); // Log successful updates
-          return;
-        } catch (err) {
-          if (i === retries - 1) {
-            console.error(`Failed to update role ${roleId} after ${retries} attempts:`);
-            throw err;
-          }
-          console.warn(`Retrying role ${roleId} after failure`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-      }
-    }
-
-    async function withTimeout(promise: Promise<UpdateResult>, timeout: number | undefined) {
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Operation timed out')), timeout)
-      );
-      return Promise.race([promise, timeoutPromise]);
-    }
-
-    async function updateRole(role: SupersetRole) {
+    // Function to handle updating a single role
+    const updateRole = async (role: SupersetRole) => {
       if (!role.id) throw new Error('No ID provided for role');
-      await retryOperation(() => permissionManager.updatePermissions(role.id, ids), role.id);
-    }
+      await retryOperation(
+        () => permissionManager.updatePermissions(role.id, ids),
+        3, // retries
+        1000, // delay between retries in ms
+        10000 // timeout per operation in ms
+      );
+      updatedRoles.add(role.id); // Log successful updates
+    };
 
-    // First attempt to update all roles
-    const updatePromises = roles.map((role) => limit(() => updateRole(role)));
-
-    await Promise.allSettled(updatePromises);
+    // Initial attempt to update all roles
+    const initialTasks = roles.map((role) => () => updateRole(role));
+    await executeWithConcurrency(initialTasks, 10); // Concurrency limit of 10
 
     console.log('Initial update completed. Successful updates:', Array.from(updatedRoles));
 
-    // Identify failed roles
-    const failedRoles = roles.filter(role => !updatedRoles.has(role.id));
+    // Retry failed roles
+    const failedRoles = roles.filter(role => !updatedRoles.has(role.id!));
     console.log('Retrying failed roles:', failedRoles.map(role => role.id));
 
     if (failedRoles.length > 0) {
-      const retryPromises = failedRoles.map((role) => limit(() => updateRole(role)));
-      await Promise.allSettled(retryPromises);
+      const retryTasks = failedRoles.map((role) => () => updateRole(role));
+      await executeWithConcurrency(retryTasks, 10);
       console.log('Retry update completed. Final successful updates:', Array.from(updatedRoles));
     }
 

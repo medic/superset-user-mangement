@@ -1,5 +1,5 @@
 /**
- * Helper class to save convert, save and retrieve roles from Redis.
+ * Repository class to save convert, save and retrieve roles from Redis.
  */
 
 import {createClient, RedisClientType} from "redis";

@@ -12,17 +12,12 @@ export class RoleAdapter {
      * @param supersetRoles
      */
   public async toParsedRole(supersetRoles: SupersetRole[]) {
-    const parsedRoles: ParsedRole[] = [];
-
-    for (const role of supersetRoles) {
-      const key = this.extractCHUCode(role.name);
-      if (key) {
-        console.log(key);
-        parsedRoles.push({ code: key, role: role });
-      }
-    }
-
-    return parsedRoles;
+    return supersetRoles
+      .map(role => {
+        const key = this.extractCHUCode(role.name);
+        return key ? { code: key, role } : null;
+      })
+      .filter((parsedRole): parsedRole is ParsedRole => parsedRole !== null);
   }
 
   /**
