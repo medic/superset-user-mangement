@@ -48,10 +48,12 @@ export class AuthService {
   private readonly getFormattedHeaders = (
     bearerToken: string,
     csrfToken: string,
+    cookie: string,
   ) => ({
     Authorization: `Bearer ${bearerToken}`,
     'Content-Type': 'application/json',
     'X-CSRFToken': csrfToken,
+    Cookie: cookie,
   });
 
   public async getHeaders() {
@@ -66,7 +68,7 @@ export class AuthService {
       const csrfToken = await this.getCSRFToken(tokens.bearerToken);
 
       // Set headers once obtained
-      this.headers = this.getFormattedHeaders(tokens.bearerToken, csrfToken);
+      this.headers = this.getFormattedHeaders(tokens.bearerToken, csrfToken, tokens.cookie);
 
       return this.headers;
     } catch (error) {

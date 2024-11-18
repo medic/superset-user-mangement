@@ -3,17 +3,17 @@
  */
 
 import { AuthService } from "./auth-service";
-import {RequestInit} from "node-fetch";
+import { RequestInit } from "node-fetch";
 import rison from "rison";
-import {fetchRequest} from "../request-util";
-import {RLSList, RowLevelSecurity, UpdateResult, UpdateRLSRequest, UpdateRLSResponse} from "../model/rls.model";
-import {RlsRepository} from "../repository/rls-respository";
+import { fetchRequest } from "../request-util";
+import { RLSList, RowLevelSecurity, UpdateResult, UpdateRLSRequest, UpdateRLSResponse } from "../model/rls.model";
+import { RlsRepository } from "../repository/rls-respository";
 
 export class RLSService {
 
-  private readonly BASE_RLS_ID = 3051;
+  readonly BASE_RLS_ID = 3051;
 
-  constructor(private readonly authService: AuthService = new AuthService()) {}
+  constructor(private readonly authService: AuthService = new AuthService()) { }
 
   /**
    * Fetches Superset Roles by page
@@ -23,32 +23,32 @@ export class RLSService {
       const headers = await this.authService.getHeaders();
       let currentPage = 0;
       let policies: RowLevelSecurity[] = [];
-  
+
       while (true) {
-        const queryParams = rison.encode({page: currentPage, page_size: 100});
+        const queryParams = rison.encode({ page: currentPage, page_size: 100 });
         const request: RequestInit = {
           method: "GET",
           headers: headers,
         };
-  
+
         const rlsList: RLSList = await fetchRequest(
           `/rowlevelsecurity/?q=${queryParams}`,
           request,
         ) as RLSList;
-  
+
         if (!rlsList?.result) {
           throw new Error('Failed to fetch RLS policies: Invalid response format');
         }
-  
+
         policies = policies.concat(rlsList.result);
-  
+
         if (rlsList.result.length === 0) {
           break;
         }
-  
+
         currentPage++;
       }
-  
+
       return policies;
     } catch (error) {
       console.error(`Failed to fetch RLS policies: ${error}`);
@@ -68,7 +68,7 @@ export class RLSService {
     if (!groupKey || typeof groupKey !== 'string') {
       throw new Error('Invalid groupKey input: Expected non-empty string');
     }
-    
+
     return policies.filter((policy) => policy.group_key === groupKey);
   }
 
@@ -119,7 +119,7 @@ export class RLSService {
  * @returns Promise resolving to an array of update results
  * @throws Error if the update fails
  */
-async updateRLSTables(tables: number[], policies: RowLevelSecurity[]): Promise<UpdateResult[]> {
+  async updateRLSTables(tables: number[], policies: RowLevelSecurity[]): Promise<UpdateResult[]> {
     const headers = await this.authService.getHeaders();
     const results: UpdateResult[] = [];
     const failedUpdates: RowLevelSecurity[] = [];
@@ -131,11 +131,11 @@ async updateRLSTables(tables: number[], policies: RowLevelSecurity[]): Promise<U
       // Process policies in batches
       for (let i = 0; i < policies.length; i += BATCH_SIZE) {
         const batch = policies.slice(i, i + BATCH_SIZE);
-        
+
         // Process each policy in the current batch
         const batchPromises = batch.map(async (policy) => {
           let retries = 0;
-          
+
           while (retries < MAX_RETRIES) {
             try {
               const updateRequest: UpdateRLSRequest = {
@@ -148,6 +148,8 @@ async updateRLSTables(tables: number[], policies: RowLevelSecurity[]): Promise<U
                 tables: tables // Update with new table IDs
               };
 
+              console.log(updateRequest);
+
               const request: RequestInit = {
                 method: 'PUT',
                 headers: headers,
@@ -159,20 +161,24 @@ async updateRLSTables(tables: number[], policies: RowLevelSecurity[]): Promise<U
                 request
               ) as UpdateRLSResponse;
 
-              results.push({
-                id: response.id,
-                status: 'success',
-                message: `Successfully updated RLS policy ${policy.name}`
-              });
-              
+              if (response.id) {
+                results.push({
+                  id: response.id,
+                  status: 'success',
+                  message: `Successfully updated RLS policy ${policy.name}`
+                });
+              }
+
               return;
             } catch (error) {
+              console.log(error);
+
               if (retries < MAX_RETRIES - 1) {
                 retries++;
                 await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                 continue;
               }
-              
+
               failedUpdates.push(policy);
               results.push({
                 id: policy.id,
@@ -186,7 +192,7 @@ async updateRLSTables(tables: number[], policies: RowLevelSecurity[]): Promise<U
 
         // Wait for all policies in the current batch to complete
         await Promise.all(batchPromises);
-        
+
         // Add a small delay between batches to prevent rate limiting
         if (i + BATCH_SIZE < policies.length) {
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -197,7 +203,7 @@ async updateRLSTables(tables: number[], policies: RowLevelSecurity[]): Promise<U
       if (failedUpdates.length > 0) {
         console.log(`Retrying ${failedUpdates.length} failed updates...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-        
+
         const retryResults = await this.updateRLSTables(tables, failedUpdates);
         results.push(...retryResults);
       }

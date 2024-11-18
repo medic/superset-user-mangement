@@ -1,11 +1,11 @@
-import {CSVUser} from "./model/user.model"
-import {AuthService} from "./service/auth-service";
-import {DATA_FILE_PATH} from "./config";
-import {parseCSV} from "./repository/csv-util";
-import {PermissionService} from "./service/permission-service";
-import {RoleService} from "./service/role-service";
-import {RedisService} from "./repository/redis-util";
-import {RLSService} from "./service/rls-service";
+import { CSVUser } from "./model/user.model"
+import { AuthService } from "./service/auth-service";
+import { DATA_FILE_PATH } from "./config";
+import { parseCSV } from "./repository/csv-util";
+import { PermissionService } from "./service/permission-service";
+import { RoleService } from "./service/role-service";
+import { RedisService } from "./repository/redis-util";
+import { RLSService } from "./service/rls-service";
 
 /**
  * App entry point
@@ -25,7 +25,7 @@ class App {
     this.filePath = filePath;
   }
 
-  async login(){
+  async login() {
     await this.authService.login()
   }
 
@@ -59,7 +59,7 @@ class App {
 
     const role = await this.roleService.createRoles(['Base CHA Role'])
 
-    if((!role || role.length === 0) || !permissions) return;
+    if ((!role || role.length === 0) || !permissions) return;
     const updateRole = await this.roleService.updateRolePermissions(role, permissions)
     console.log(`Updated role ${updateRole}`)
 
@@ -77,7 +77,7 @@ class App {
     return await this.roleService.updateRolePermissions(supersetRoles, permissions);
   }
 
-  async fetchCountyRLS()  { 
+  async fetchCountyRLS() {
     const rls = await this.rlsService.fetchRLSPolicies();
     console.log(`Fetched ${rls.length} RLSs`)
     // const baseTables = await this.rlsService.fetchBaseTables();
@@ -86,10 +86,32 @@ class App {
 
     return countyTables.length;
   }
+
+  async updateCountyRLS() {
+    const rls = await this.rlsService.fetchRLSPolicies();
+    console.log(`Fetched ${rls.length} RLSs`)
+
+    const countyRLS = await this.rlsService.filterByGroupKey(rls, 'county_name');
+    console.log(`Fetched ${countyRLS.length} county RLSs`);
+
+    const rlsToUpdate = countyRLS.filter(policy => policy.id !== this.rlsService.BASE_RLS_ID);
+    console.log(`Filtered out base policy. Remaining policies: ${rlsToUpdate.length}`);
+
+    const tables = await this.rlsService.fetchBaseTables();
+
+    const test = rlsToUpdate.filter(policy => policy.name.toLowerCase().includes('uasin'));
+    console.log(`Updating policies for Uasin Gishu`);
+
+    const results = await this.rlsService.updateRLSTables(tables, test);
+
+    console.log(`Updated ${results.length} county RLSs`);
+
+    return results;
+  }
 }
 
 const app = new App(DATA_FILE_PATH);
-app.fetchCountyRLS().then((res) => console.log(res))
+app.updateCountyRLS().then((res) => console.log(res))
 
 process.on('SIGINT', async () => {
   await RedisService.disconnect();

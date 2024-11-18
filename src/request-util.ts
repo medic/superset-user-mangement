@@ -41,6 +41,12 @@ export async function fetchRequest(
     console.log(
       `HTTP error! status: ${response.status} ${response.statusText}`,
     );
+    try {
+      const errorBody = await response.clone().text();
+      console.error('Error response body:', errorBody);
+    } catch (e) {
+      console.error('Could not read error response body');
+    }
   }
   return await response.json();
 }
