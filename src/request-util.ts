@@ -33,7 +33,7 @@ export async function fetchWithHeaders(
   }
 }
 
-export async function fetchRequest(
+export async function makeApiRequest(
   endpoint: string,
   request: AxiosRequestConfig,
 ): Promise<any> {

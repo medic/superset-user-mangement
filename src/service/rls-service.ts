@@ -10,7 +10,7 @@ import {
   UpdateRLSResponse,
   UpdateResult,
 } from "../model/rls.model";
-import { fetchRequest } from "../request-util";
+import { makeApiRequest } from "../request-util";
 import { AxiosRequestConfig } from "axios";
 import rison from "rison";
 import { RlsRepository } from "../repository/rls-respository";
@@ -40,7 +40,7 @@ export class RLSService {
           headers: headers,
         };
 
-        const rlsList: RLSList = await fetchRequest(
+        const rlsList: RLSList = await makeApiRequest(
           `/rowlevelsecurity/?q=${queryParams}`,
           request,
         ) as RLSList;
@@ -102,7 +102,7 @@ export class RLSService {
       headers: headers,
     };
 
-    const policy = await fetchRequest(
+    const policy = await makeApiRequest(
       `/rowlevelsecurity/${this.BASE_RLS_ID}`,
       request,
     ) as {
@@ -169,7 +169,7 @@ export class RLSService {
                 data: updateRequest,
               };
 
-              const response = await fetchRequest(
+              const response = await makeApiRequest(
                 `/rowlevelsecurity/${policy.id}`,
                 request
               ) as UpdateRLSResponse;

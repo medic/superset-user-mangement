@@ -4,7 +4,7 @@
 
 import { LoginRequest, LoginResponse, CSRFResponse } from '../model/auth.model';
 import { SUPERSET } from '../config';
-import { API_URL } from '../request-util';
+import { API_URL, makeApiRequest } from '../request-util';
 import axios from 'axios';
 
 export class AuthService {
@@ -18,9 +18,14 @@ export class AuthService {
       refresh: true
     };
 
-    const response = await axios.post(`${API_URL()}/security/login`, body, {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const response = await makeApiRequest(
+      `/security/login`,
+      {
+        method: 'post',
+        data: body,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
 
     const cookie = response.headers['set-cookie']?.[0] ?? '';
     console.log('Login response cookie:', cookie);
@@ -32,12 +37,16 @@ export class AuthService {
   }
 
   private readonly getCSRFToken = async (bearerToken: string): Promise<string> => {
-    const response = await axios.get(`${API_URL()}/security/csrf_token/`, {
-      headers: {
-        Authorization: `Bearer ${bearerToken}`,
-        'X-Request-With': 'XMLHttpRequest'
-      },
-    });
+    const response = await makeApiRequest(
+      `/security/csrf_token/`,
+      {
+        method: 'get',
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+          'X-Request-With': 'XMLHttpRequest'
+        },
+      }
+    );
 
     console.log('CSRF token response:', response.data);
     return response.data.result;

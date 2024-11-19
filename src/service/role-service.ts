@@ -3,16 +3,15 @@
  */
 
 import rison from "rison";
-import axios, { AxiosRequestConfig } from "axios";
+import { AxiosRequestConfig } from "axios";
 import { PermissionService } from "./permission-service";
 import { CreateRoleResponse, ParsedRole, RoleList, SupersetRole } from "../model/role.model";
-import { PermissionIds, UpdateResult } from "../model/permission.model";
+import { PermissionIds } from "../model/permission.model";
 import { AuthService } from "./auth-service";
 import { RoleRepository } from "../repository/role-repository";
 import { RoleAdapter } from "../repository/role-adapter";
 import { CSVUser } from "../model/user.model";
-import { executeWithConcurrency, retryOperation } from "../request-util";
-import pLimit from "p-limit";
+import { executeWithConcurrency, makeApiRequest, retryOperation } from "../request-util";
 
 export class RoleService {
   constructor(
@@ -39,8 +38,10 @@ export class RoleService {
 
     while (true) {
       const queryParams = rison.encode({ page: currentPage, page_size: 100 });
-      const response = await axios(`/security/roles?q=${queryParams}`, request);
-      const roleList: RoleList = response.data as RoleList;
+      const roleList: RoleList = (await makeApiRequest(
+        `/security/roles?q=${queryParams}`,
+        request,
+      )) as RoleList;
 
       // Append roles from the current page to the allRoles array
       roles = roles.concat(roleList.result);
@@ -124,8 +125,11 @@ export class RoleService {
 
       console.log(`Creating role ${name}`);
 
-      const response = await axios(`/security/roles/`, request);
-      return response.data as CreateRoleResponse;
+      const response = (await makeApiRequest(
+        `/security/roles/`,
+        request,
+      )) as CreateRoleResponse;
+      return response;
     };
 
     const rolesPromises = names.map((name) =>

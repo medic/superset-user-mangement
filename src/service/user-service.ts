@@ -5,7 +5,7 @@
 import { AxiosRequestConfig } from "axios";
 import { AuthService } from "./auth-service";
 import { CSVUser, User } from "../model/user.model";
-import { fetchRequest } from "../request-util";
+import { makeApiRequest } from "../request-util";
 
 export class UserManager {
 
@@ -29,7 +29,7 @@ export class UserManager {
     const headers = await this.authService.getHeaders();
 
     for (const user of users){
-      const response = await fetchRequest(
+      const response = await makeApiRequest(
         `/security/users/`,
         this.generateRequest(user, headers)
       );
