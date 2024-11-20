@@ -1,13 +1,12 @@
-/**
- * Helper functions for handling role permissions
- */
-
 import axios, { AxiosRequestConfig } from 'axios';
 import { PermissionList, PermissionIds, UpdateResult, Permission } from '../model/permission.model';
 import { AuthService } from './auth-service';
 
+  /**
+   * Class to manage permissions for roles on Superset
+   */
 export class PermissionService {
-  private readonly DEFAULT_ROLE: number = 3412;
+  private readonly DEFAULT_ROLE: number = 3051;
 
   constructor(private readonly authService: AuthService = new AuthService()) {}
 

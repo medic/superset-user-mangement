@@ -80,7 +80,6 @@ class App {
   async fetchCountyRLS() {
     const rls = await this.rlsService.fetchRLSPolicies();
     console.log(`Fetched ${rls.length} RLSs`)
-    // const baseTables = await this.rlsService.fetchBaseTables();
     const countyTables = await this.rlsService.filterByGroupKey(rls, 'county_name');
     console.log(`Fetched ${countyTables.length} county RLSs`);
 
@@ -95,16 +94,28 @@ class App {
     console.log(`Fetched ${countyRLS.length} county RLSs`);
 
     const rlsToUpdate = countyRLS.filter(policy => policy.id !== this.rlsService.BASE_RLS_ID);
-    console.log(`Filtered out base policy. Remaining policies: ${rlsToUpdate.length}`);
 
     const tables = await this.rlsService.fetchBaseTables();
-
-    const test = rlsToUpdate.filter(policy => policy.name.toLowerCase().includes('uasin'));
-    console.log(`Updating policies for Uasin Gishu`);
-
-    const results = await this.rlsService.updateRLSTables(tables, test);
+    const results = await this.rlsService.updateRLSTables(tables, rlsToUpdate);
 
     console.log(`Updated ${results.length} county RLSs`);
+
+    return results;
+  }
+
+  async updateCHURLS() {
+    const rls = await this.rlsService.fetchRLSPolicies();
+    console.log(`Fetched ${rls.length} RLSs`)
+
+    const countyRLS = await this.rlsService.filterByGroupKey(rls, 'chu_code');
+    console.log(`Fetched ${countyRLS.length} CHU RLSs`);
+
+    const rlsToUpdate = countyRLS.filter(policy => policy.id !== this.rlsService.BASE_RLS_ID);
+
+    const tables = await this.rlsService.fetchBaseTables();
+    const results = await this.rlsService.updateRLSTables(tables, rlsToUpdate);
+
+    console.log(`Updated ${results.length} CHU RLSs`);
 
     return results;
   }

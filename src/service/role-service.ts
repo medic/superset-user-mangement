@@ -1,7 +1,3 @@
-/**
- * Class to fetch and manage roles from Superset
- */
-
 import rison from "rison";
 import { AxiosRequestConfig } from "axios";
 import { PermissionService } from "./permission-service";
@@ -13,6 +9,13 @@ import { RoleAdapter } from "../repository/role-adapter";
 import { CSVUser } from "../model/user.model";
 import { executeWithConcurrency, makeApiRequest, retryOperation } from "../request-util";
 
+  /**
+   * Class responsible for managing roles in Superset.
+   *
+   * @remarks
+   * This class provides methods to fetch, create, update, and delete roles from
+   * Superset. It also provides a method to match roles to users based on chu codes.
+   */
 export class RoleService {
   constructor(
     private readonly authService: AuthService = new AuthService(),

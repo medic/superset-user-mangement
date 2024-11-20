@@ -1,13 +1,8 @@
-/**
- * Class to manage Row Level Security for Roles
- */
-
 import { AuthService } from "./auth-service";
 import {
   RLSList,
   RowLevelSecurity,
   UpdateRLSRequest,
-  UpdateRLSResponse,
   UpdateResult,
 } from "../model/rls.model";
 import { makeApiRequest } from "../request-util";
@@ -15,8 +10,12 @@ import { AxiosRequestConfig } from "axios";
 import rison from "rison";
 import { RlsRepository } from "../repository/rls-respository";
 
+
 /**
- * Class to manage Row Level Security for Roles
+ * Service class to manage Row Level Security (RLS) for roles.
+ * This class provides methods to fetch, filter, save, and update RLS policies.
+ * It interacts with an authentication service to handle API requests and uses
+ * a repository to persist RLS data in Redis.
  */
 export class RLSService {
 
@@ -40,10 +39,12 @@ export class RLSService {
           headers: headers,
         };
 
-        const rlsList: RLSList = await makeApiRequest(
+        const response = await makeApiRequest(
           `/rowlevelsecurity/?q=${queryParams}`,
           request,
-        ) as RLSList;
+        );
+
+        const rlsList: RLSList = response.data;
 
         if (!rlsList?.result) {
           throw new Error('Failed to fetch RLS policies: Invalid response format');
@@ -102,15 +103,14 @@ export class RLSService {
       headers: headers,
     };
 
-    const policy = await makeApiRequest(
+    const response = await makeApiRequest(
       `/rowlevelsecurity/${this.BASE_RLS_ID}`,
       request,
-    ) as {
-      id: number,
-      result: RowLevelSecurity
-    }
+    );
 
-    return policy.result;
+    const policy = response.data ;
+
+    return policy.result as RowLevelSecurity;
   }
 
   /**
@@ -157,12 +157,6 @@ export class RLSService {
                 tables: tables // Update with new table IDs
               };
 
-              console.log('Update request:', {
-                url: `/rowlevelsecurity/${policy.id}`,
-                headers: headers,
-                data: updateRequest
-              });
-
               const request: AxiosRequestConfig = {
                 method: 'PUT',
                 headers: headers,
@@ -172,11 +166,13 @@ export class RLSService {
               const response = await makeApiRequest(
                 `/rowlevelsecurity/${policy.id}`,
                 request
-              ) as UpdateRLSResponse;
+              );
 
-              if (response.id) {
+              const updateResponse = response.data;
+
+              if (updateResponse.id) {
                 results.push({
-                  id: response.id,
+                  id: updateResponse.id,
                   status: 'success',
                   message: `Successfully updated RLS policy ${policy.name}`
                 });

@@ -1,16 +1,16 @@
-/**
- * Authentication helper functions
- */
-
-import { LoginRequest, LoginResponse, CSRFResponse } from '../model/auth.model';
+import { LoginRequest } from '../model/auth.model';
 import { SUPERSET } from '../config';
-import { API_URL, makeApiRequest } from '../request-util';
-import axios from 'axios';
+import { makeApiRequest } from '../request-util';
 
+/**
+ * Class for handling authentication on Superset.
+ * Provides methods to obtain bearer tokens, CSRF tokens, and formatted headers.
+ * Headers are cached once obtained.
+ */
 export class AuthService {
   private headers: any;
 
-  public async login(): Promise<{ bearerToken: string; cookie: string }> {
+  public async login(): Promise<{ bearerToken: string }> {
     const body: LoginRequest = {
       username: SUPERSET.username,
       password: SUPERSET.password,
@@ -27,16 +27,12 @@ export class AuthService {
       }
     );
 
-    const cookie = response.headers['set-cookie']?.[0] ?? '';
-    console.log('Login response cookie:', cookie);
-    
-    return { 
+    return {
       bearerToken: response.data.access_token,
-      cookie 
     };
   }
 
-  private readonly getCSRFToken = async (bearerToken: string): Promise<string> => {
+  private readonly getCSRFToken = async (bearerToken: string): Promise<{ token: string; cookie: string }> => {
     const response = await makeApiRequest(
       `/security/csrf_token/`,
       {
@@ -48,8 +44,12 @@ export class AuthService {
       }
     );
 
-    console.log('CSRF token response:', response.data);
-    return response.data.result;
+    const csrfCookie = response.headers?.['set-cookie']?.[0] ?? '';
+    
+    return {
+      token: response.data.result,
+      cookie: csrfCookie
+    };
   };
 
   private readonly getFormattedHeaders = (
@@ -60,7 +60,6 @@ export class AuthService {
     Authorization: `Bearer ${bearerToken}`,
     'Content-Type': 'application/json',
     'X-CSRFToken': csrfToken,
-    'X-Request-With': 'XMLHttpRequest',
     Cookie: cookie,
   });
 
@@ -72,11 +71,15 @@ export class AuthService {
 
     try {
       // Fetch new tokens
-      const tokens = await this.login();
-      const csrfToken = await this.getCSRFToken(tokens.bearerToken);
+      const { bearerToken } = await this.login();
+      const csrf = await this.getCSRFToken(bearerToken);
 
       // Set headers once obtained
-      this.headers = this.getFormattedHeaders(tokens.bearerToken, csrfToken, tokens.cookie);
+      this.headers = this.getFormattedHeaders(
+        bearerToken, 
+        csrf.token,
+        csrf.cookie
+      );
       console.log('Final headers:', this.headers);
 
       return this.headers;

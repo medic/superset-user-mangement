@@ -1,6 +1,3 @@
-/**
- * Helper functions for making network requests
- */
 
 import axios, { AxiosRequestConfig } from 'axios';
 import { SUPERSET } from "./config";
@@ -11,6 +8,15 @@ export const API_URL = (): string => {
   return url.toString();
 };
 
+/**
+ * Fetches data from the specified endpoint with the provided AxiosRequestConfig options,
+ * and returns the response data and headers.
+ *
+ * @param endpoint - The API endpoint to send the request to.
+ * @param options - The AxiosRequestConfig options for the request.
+ * @returns A promise that resolves with an object containing the JSON response data and the headers.
+ * @throws Will throw an error if the request fails.
+ */
 export async function fetchWithHeaders(
   endpoint: string,
   options: AxiosRequestConfig,
@@ -48,7 +54,7 @@ export async function makeApiRequest(
     };
 
     const response = await axios(finalOptions);
-    return response.data;
+    return response;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
       console.log(
