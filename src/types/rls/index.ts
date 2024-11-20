@@ -1,12 +1,13 @@
 /**
- * Model for Row Level Security
+ * Row Level Security related types
  */
-import {SupersetRole} from "./role.model";
+
+import { SupersetRole } from '../role';
 
 export interface RLSList {
   count: number;
   ids: number[];
-  result: RowLevelSecurity[]
+  result: RowLevelSecurity[];
 }
 
 export interface RowLevelSecurity {

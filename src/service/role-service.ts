@@ -1,13 +1,13 @@
 import rison from "rison";
 import { AxiosRequestConfig } from "axios";
 import { PermissionService } from "./permission-service";
-import { CreateRoleResponse, ParsedRole, RoleList, SupersetRole } from "../model/role.model";
-import { PermissionIds } from "../model/permission.model";
+import { CreateRoleResponse, ParsedRole, RoleList, SupersetRole } from "../types/role";
+import { PermissionIds } from "../types/permission";
 import { AuthService } from "./auth-service";
 import { RoleRepository } from "../repository/role-repository";
 import { RoleAdapter } from "../repository/role-adapter";
-import { CSVUser } from "../model/user.model";
-import { executeWithConcurrency, makeApiRequest, retryOperation } from "../request-util";
+import { CSVUser } from "../types/user";
+import { executeWithConcurrency, makeApiRequest, retryOperation } from "../utils/request.utils";
 
   /**
    * Class responsible for managing roles in Superset.

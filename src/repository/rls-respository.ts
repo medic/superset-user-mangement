@@ -1,7 +1,7 @@
 /**
  * Repository class to save convert, save and retrieve RLS policies from Redis.
  */
-import {RLSEntity, RowLevelSecurity} from "../model/rls.model";
+import {RLSEntity, RowLevelSecurity} from "../types/rls";
 import {RedisService} from "./redis-util";
 
 export class RlsRepository {

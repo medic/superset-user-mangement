@@ -1,18 +1,18 @@
 /**
- * Models for managing permissions
+ * Permission related types
  */
 
 export interface PermissionList {
-  result : Permission[]
+  result: Permission[];
 }
 
 export interface Permission {
-  id: number, 
-  permission_name: string,
-  view_menu_name: string
+  id: number;
+  permission_name: string;
+  view_menu_name: string;
 }
 
-export interface UpdateResult {
+export interface UpdatePermissionResult {
   result: PermissionIds;
 }
 

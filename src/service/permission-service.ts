@@ -1,5 +1,5 @@
 import axios, { AxiosRequestConfig } from 'axios';
-import { PermissionList, PermissionIds, UpdateResult, Permission } from '../model/permission.model';
+import { PermissionList, PermissionIds, UpdatePermissionResult, Permission } from '../types/permission';
 import { AuthService } from './auth-service';
 
   /**
@@ -58,7 +58,7 @@ export class PermissionService {
 
     try {
       const response = await axios(`/security/roles/${roleId}/permissions`, request);
-      return response.data as UpdateResult;
+      return response.data as UpdatePermissionResult;
     } catch (error) {
       console.error(`Failed to update permissions for role ${roleId}:`, error);
       throw new Error(`Error updating permissions for role ${roleId}`);

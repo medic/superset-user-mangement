@@ -1,5 +1,5 @@
 /**
- * Models for users
+ * User related types
  */
 
 export interface User {
@@ -13,11 +13,13 @@ export interface User {
 }
 
 export interface CSVUser {
-  first_name: string,
-  last_name: string,
-  username: string,
-  email: string,
-  role: string,
-  chu: string,
-  password: string
+  first_name: string;
+  last_name: string;
+  username: string;
+  password: string;
+  email: string;
+  role: string;
+  chu: string;
+  county: string;
+  facility: string;
 }

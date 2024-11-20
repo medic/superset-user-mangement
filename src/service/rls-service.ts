@@ -4,8 +4,8 @@ import {
   RowLevelSecurity,
   UpdateRLSRequest,
   UpdateResult,
-} from "../model/rls.model";
-import { makeApiRequest } from "../request-util";
+} from "../types/rls";
+import { makeApiRequest } from "../utils/request.utils";
 import { AxiosRequestConfig } from "axios";
 import rison from "rison";
 import { RlsRepository } from "../repository/rls-respository";

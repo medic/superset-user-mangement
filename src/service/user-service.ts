@@ -4,8 +4,8 @@
 
 import { AxiosRequestConfig } from "axios";
 import { AuthService } from "./auth-service";
-import { CSVUser, User } from "../model/user.model";
-import { makeApiRequest } from "../request-util";
+import { CSVUser, User } from "../types/user";
+import { makeApiRequest } from "../utils/request.utils";
 
 export class UserManager {
 

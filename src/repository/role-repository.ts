@@ -3,7 +3,7 @@
  */
 
 import {createClient, RedisClientType} from "redis";
-import {ParsedRole, SupersetRole} from "../model/role.model";
+import {ParsedRole, SupersetRole} from "../types/role";
 import fs from "fs";
 import csv from "csv-parser";
 

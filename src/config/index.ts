@@ -1,5 +1,11 @@
 /**
- * Superset access configs
+ * Configuration module for the application.
+ * 
+ * This file contains environment-specific configuration settings,
+ * including Superset credentials and API details.
+ * It uses dotenv to load environment variables from a .env file.
+ * 
+ * @module config
  */
 
 import * as dotenv from 'dotenv';
@@ -19,7 +25,7 @@ export const SUPERSET = {
   trustSelfSigned: true,
 };
 
-export const DATA_FILE_PATH = getEnvironmentVariable('DATA_FILE_PATH', 'src/wundanyi.csv');
+export const DATA_FILE_PATH = getEnvironmentVariable('DATA_FILE_PATH', 'data/wundanyi.csv');
 
 function getEnvironmentVariable(env: string, def: string) {
   return process.env[env] ?? def;

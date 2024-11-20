@@ -1,6 +1,6 @@
 
 import axios, { AxiosRequestConfig } from 'axios';
-import { SUPERSET } from "./config";
+import { SUPERSET } from "../config";
 import pLimit from "p-limit";
 
 export const API_URL = (): string => {

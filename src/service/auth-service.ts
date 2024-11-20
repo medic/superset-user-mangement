@@ -1,6 +1,6 @@
-import { LoginRequest } from '../model/auth.model';
+import { LoginRequest } from '../types/auth';
 import { SUPERSET } from '../config';
-import { makeApiRequest } from '../request-util';
+import { makeApiRequest } from '../utils/request.utils';
 
 /**
  * Class for handling authentication on Superset.

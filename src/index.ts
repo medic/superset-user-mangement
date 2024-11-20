@@ -1,4 +1,4 @@
-import { CSVUser } from "./model/user.model"
+import { CSVUser } from "./types/user";
 import { AuthService } from "./service/auth-service";
 import { DATA_FILE_PATH } from "./config";
 import { parseCSV } from "./repository/csv-util";

@@ -2,7 +2,7 @@
  * Helper functions to manipulate SupersetRoles
  */
 
-import { SupersetRole, ParsedRole } from '../model/role.model';
+import { SupersetRole, ParsedRole } from '../types/role';
 
 export class RoleAdapter {
 
