@@ -7,8 +7,7 @@ async function updateCountyRLSPolicies() {
     Logger.info("Starting county RLS update process...");
 
     // Initialize services
-    const authService = new AuthService();
-    const rlsService = new RLSService(authService);
+    const rlsService = new RLSService();
 
     // Step 1: Fetch all RLS policies
     Logger.info("Fetching all RLS policies...");

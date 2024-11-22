@@ -1,8 +1,5 @@
 import { RLSService } from "../src/service/rls-service";
-import { AuthService } from "../src/service/auth-service";
-import { RedisService } from "../src/repository/redis-util";
 import { Logger } from "../src/utils/logger";
-import { RowLevelSecurity } from "../src/types/rls";
 
 /**
  * Compares two arrays of table IDs to check if they contain the same tables
@@ -19,7 +16,7 @@ async function updateCHURLSPolicies() {
     Logger.info("Starting CHU RLS update process...");
 
     // Initialize services
-    const rlsService = new RLSService(AuthService.getInstance());
+    const rlsService = new RLSService();
 
     // Step 1: Fetch all RLS policies
     Logger.info("Fetching all RLS policies...");
