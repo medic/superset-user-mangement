@@ -1,8 +1,8 @@
 /**
  * Repository class to save convert, save and retrieve RLS policies from Redis.
  */
-import {RLSEntity, RowLevelSecurity} from "../types/rls";
-import {RedisService} from "./redis-util";
+import { RLSEntity, RowLevelSecurity } from "../types/rls";
+import { RedisService } from "./redis-util";
 
 export class RlsRepository {
 
@@ -44,8 +44,8 @@ export class RlsRepository {
         const rlsEntity = await redisClient.hGet(key, 'rls');
         const rlsPolicy = this.parseRLSEntity(rlsEntity);
 
-        if(rlsPolicy) {
-          rlsEntities.push({ id: parseInt(key), rls : rlsPolicy})
+        if (rlsPolicy) {
+          rlsEntities.push({ id: parseInt(key), rls: rlsPolicy })
         }
       }
     } catch (error) {

@@ -6,27 +6,29 @@ import { PermissionService } from "./service/permission-service";
 import { RoleService } from "./service/role-service";
 import { RedisService } from "./repository/redis-util";
 import { RLSService } from "./service/rls-service";
+import { UserManager } from './service/user-service';
+import { Logger } from './utils/logger';
 
 /**
  * App entry point
  */
 class App {
-  private readonly authService: AuthService;
   private readonly roleService: RoleService;
-  private readonly permissionService: PermissionService;
   private readonly rlsService: RLSService;
+  private readonly userManager: UserManager;
+  private readonly permissionService: PermissionService;
   private readonly filePath: string;
 
   constructor(filePath: string) {
-    this.authService = new AuthService();
     this.roleService = new RoleService();
-    this.permissionService = new PermissionService();
     this.rlsService = new RLSService();
+    this.userManager = new UserManager();
+    this.permissionService = new PermissionService();
     this.filePath = filePath;
   }
 
   async login() {
-    await this.authService.login()
+    // Removed AuthService initialization and setAuthService usage
   }
 
   /**
@@ -77,32 +79,6 @@ class App {
     return await this.roleService.updateRolePermissions(supersetRoles, permissions);
   }
 
-  async fetchCountyRLS() {
-    const rls = await this.rlsService.fetchRLSPolicies();
-    console.log(`Fetched ${rls.length} RLSs`)
-    const countyTables = await this.rlsService.filterByGroupKey(rls, 'county_name');
-    console.log(`Fetched ${countyTables.length} county RLSs`);
-
-    return countyTables.length;
-  }
-
-  async updateCountyRLS() {
-    const rls = await this.rlsService.fetchRLSPolicies();
-    console.log(`Fetched ${rls.length} RLSs`)
-
-    const countyRLS = await this.rlsService.filterByGroupKey(rls, 'county_name');
-    console.log(`Fetched ${countyRLS.length} county RLSs`);
-
-    const rlsToUpdate = countyRLS.filter(policy => policy.id !== this.rlsService.BASE_RLS_ID);
-
-    const tables = await this.rlsService.fetchBaseTables();
-    const results = await this.rlsService.updateRLSTables(tables, rlsToUpdate);
-
-    console.log(`Updated ${results.length} county RLSs`);
-
-    return results;
-  }
-
   async updateCHURLS() {
     const rls = await this.rlsService.fetchRLSPolicies();
     console.log(`Fetched ${rls.length} RLSs`)
@@ -110,7 +86,7 @@ class App {
     const countyRLS = await this.rlsService.filterByGroupKey(rls, 'chu_code');
     console.log(`Fetched ${countyRLS.length} CHU RLSs`);
 
-    const rlsToUpdate = countyRLS.filter(policy => policy.id !== this.rlsService.BASE_RLS_ID);
+    const rlsToUpdate = countyRLS.filter(policy => policy.id !== this.rlsService.BASE_CHA_RLS_ID);
 
     const tables = await this.rlsService.fetchBaseTables();
     const results = await this.rlsService.updateRLSTables(tables, rlsToUpdate);
@@ -119,10 +95,13 @@ class App {
 
     return results;
   }
+
+
+
 }
 
 const app = new App(DATA_FILE_PATH);
-app.updateCountyRLS().then((res) => console.log(res))
+
 
 process.on('SIGINT', async () => {
   await RedisService.disconnect();

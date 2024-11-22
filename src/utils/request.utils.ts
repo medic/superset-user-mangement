@@ -1,7 +1,8 @@
-
-import axios, { AxiosRequestConfig } from 'axios';
+import axios, { AxiosRequestConfig, AxiosError } from 'axios';
 import { SUPERSET } from "../config";
 import pLimit from "p-limit";
+import { Logger } from './logger';
+import { AuthService } from '../service/auth-service';
 
 export const API_URL = (): string => {
   const url = new URL(SUPERSET.apiPath, SUPERSET.baseURL);
@@ -9,13 +10,24 @@ export const API_URL = (): string => {
 };
 
 /**
+ * Handles 401 errors by refreshing the token and retrying the request
+ */
+const handle401Error = async (error: AxiosError, retryRequest: () => Promise<any>): Promise<any> => {
+  try {
+    // Get new access token using singleton instance
+    await AuthService.getInstance().refreshAccessToken();
+    
+    // Retry the original request with new token
+    return await retryRequest();
+  } catch (refreshError) {
+    Logger.error(`Token refresh failed: ${refreshError}`);
+    throw error; // Throw original error if refresh fails
+  }
+};
+
+/**
  * Fetches data from the specified endpoint with the provided AxiosRequestConfig options,
  * and returns the response data and headers.
- *
- * @param endpoint - The API endpoint to send the request to.
- * @param options - The AxiosRequestConfig options for the request.
- * @returns A promise that resolves with an object containing the JSON response data and the headers.
- * @throws Will throw an error if the request fails.
  */
 export async function fetchWithHeaders(
   endpoint: string,
@@ -33,8 +45,11 @@ export async function fetchWithHeaders(
       json: response.data, 
       headers: response.headers 
     };
-  } catch (error) {
-    console.error('Fetching error:', error);
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      return await handle401Error(error, () => fetchWithHeaders(endpoint, options));
+    }
+    Logger.error(`Fetching error:, ${error}`);
     throw error;
   }
 }
@@ -44,23 +59,18 @@ export async function makeApiRequest(
   request: AxiosRequestConfig,
 ): Promise<any> {
   const url = `${API_URL()}${endpoint}`;
-  console.log('Request URL:', url);
   
   try {
     const finalOptions = {
       ...request,
       url,
-      withCredentials: true
     };
 
     const response = await axios(finalOptions);
     return response;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response) {
-      console.log(
-        `HTTP error! status: ${error.response.status} ${error.response.statusText}`,
-      );
-      console.error('Error response:', error.response.data);
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      return await handle401Error(error, () => makeApiRequest(endpoint, request));
     }
     throw error;
   }

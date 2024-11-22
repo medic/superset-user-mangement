@@ -8,7 +8,7 @@ import { AuthService } from './auth-service';
 export class PermissionService {
   private readonly DEFAULT_ROLE: number = 3051;
 
-  constructor(private readonly authService: AuthService = new AuthService()) {}
+  constructor(private readonly authService: AuthService = AuthService.getInstance()) {}
 
   /**
    * Fetch permissions for a given role from Superset by roleId

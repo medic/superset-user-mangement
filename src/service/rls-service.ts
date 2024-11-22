@@ -19,9 +19,10 @@ import { RlsRepository } from "../repository/rls-respository";
  */
 export class RLSService {
 
-  readonly BASE_RLS_ID = 3051;
+  readonly BASE_CHA_RLS_ID = 3051;
+  readonly BASE_CHU_RLS_ID = 3052;
 
-  constructor(private readonly authService: AuthService = new AuthService()) { }
+  constructor(private readonly authService: AuthService = AuthService.getInstance()) { }
 
   /**
    * Fetches Superset Roles by page
@@ -96,7 +97,29 @@ export class RLSService {
   /**
    * Fetch base RLS policy
    */
-  async fetchBaseRLS() {
+  async fetchBaseRLS(): Promise<RowLevelSecurity> {
+    return this.fetchRLSById(this.BASE_CHA_RLS_ID);
+  }
+
+  /**
+   * Fetch base CHA RLS policy tables
+   */
+  async fetchBaseTables(): Promise<number[]> {
+    return this.fetchRLSTables(this.BASE_CHA_RLS_ID);
+  }
+
+  /**
+   * Fetch base CHU RLS policy tables
+   */
+  async fetchBaseCHUTables(): Promise<number[]> {
+    return this.fetchRLSTables(this.BASE_CHU_RLS_ID);
+  }
+
+  /**
+   * Fetch RLS policy by ID
+   * @param rlsId - ID of the RLS policy to fetch
+   */
+  async fetchRLSById(rlsId: number): Promise<RowLevelSecurity> {
     const headers = await this.authService.getHeaders();
     const request: AxiosRequestConfig = {
       method: "GET",
@@ -104,21 +127,21 @@ export class RLSService {
     };
 
     const response = await makeApiRequest(
-      `/rowlevelsecurity/${this.BASE_RLS_ID}`,
+      `/rowlevelsecurity/${rlsId}`,
       request,
     );
 
-    const policy = response.data ;
-
+    const policy = response.data;
     return policy.result as RowLevelSecurity;
   }
 
   /**
-   * Fetch base RLS policy tables
+   * Fetch tables from an RLS policy
+   * @param rlsId - ID of the RLS policy to fetch tables from
    */
-  async fetchBaseTables(): Promise<number[]> {
-    const tables = await this.fetchBaseRLS();
-    return tables.tables.map(table => table.id);
+  async fetchRLSTables(rlsId: number): Promise<number[]> {
+    const policy = await this.fetchRLSById(rlsId);
+    return policy.tables.map(table => table.id);
   }
 
   /**

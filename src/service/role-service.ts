@@ -18,7 +18,7 @@ import { executeWithConcurrency, makeApiRequest, retryOperation } from "../utils
    */
 export class RoleService {
   constructor(
-    private readonly authService: AuthService = new AuthService(),
+    private readonly authService: AuthService = AuthService.getInstance(),
     private readonly roleStore: RoleRepository = new RoleRepository(),
     private readonly roleAdapter: RoleAdapter = new RoleAdapter(),
   ) {}

@@ -9,7 +9,7 @@ import { makeApiRequest } from "../utils/request.utils";
 
 export class UserManager {
 
-  constructor(private readonly authService: AuthService = new AuthService()) {}
+  constructor(private readonly authService: AuthService = AuthService.getInstance()) {}
 
   private generateSupersetUser(csvUser: CSVUser, roles: number[]): User {
     const { first_name, last_name, email, username, password } = csvUser;

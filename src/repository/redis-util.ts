@@ -4,7 +4,7 @@ export class RedisService {
   private static redisClient: RedisClientType | null = null;
   private static isConnected: boolean = false;
 
-  private constructor() {} // Prevent instantiation
+  private constructor() { } // Prevent instantiation
 
   public static async getClient(): Promise<RedisClientType> {
     if (!RedisService.redisClient) {
