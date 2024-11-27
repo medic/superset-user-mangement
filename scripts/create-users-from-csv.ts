@@ -10,7 +10,10 @@ import { UpdateRLSRequest } from "../src/types/rls";
 import { SupersetRole } from "../src/types/role";
 import { RoleAdapter } from "../src/repository/role-adapter";
 import fs from "fs";
+import { readUsersFromFile } from "../src/repository/csv-util";
+import { RedisService } from "../src/repository/redis-util";
 
+// Initialize services
 const roleService = new RoleService();
 
 // Validation functions
@@ -31,16 +34,8 @@ function validateCSVUser(user: CSVUser): string[] {
   return errors;
 }
 
-// fetch users from CSVdata
-async function parseCSV(filePath: string): Promise<CSVUser[]> {
-  const csvData = await parseCSV(filePath);
-  return csvData;
-}
-
 // create users
 async function createUsers(users: CSVUser[]): Promise<CreateUserResponse[]> {
-  const userManager = new UserService();
-
   const usersToCreate: User[] = [];
   const roles = await roleService.getRoles();
 
@@ -86,7 +81,8 @@ async function createUsers(users: CSVUser[]): Promise<CreateUserResponse[]> {
     usersToCreate.push(newUser);
   }
 
-  return await userManager.createUserOnSuperset(usersToCreate);
+  const userService = new UserService();
+  return await userService.createUserOnSuperset(usersToCreate);
 }
 
 // create roles
@@ -129,10 +125,9 @@ async function createRoles(chuCodes: string, permissions: number[]): Promise<num
   return []
 }
 
-async function getChaPermissions() {
+async function getChaPermissions(): Promise<number[]> {
   const permissionService = new PermissionService();
-  const permissions = await permissionService.fetchBasePermissions();
-  return permissions;
+  return await permissionService.fetchBasePermissions();
 }
 
 // create RLS policies for new roles
@@ -205,8 +200,8 @@ async function generateCSV(users: CreateUserResponse[]) {
     if (err) {
       Logger.error(err);
     } else {
-    Logger.success('CSV file created successfully');
-  }
+      Logger.success('CSV file created successfully');
+    }
   });
 }
 
@@ -214,22 +209,30 @@ async function generateCSV(users: CreateUserResponse[]) {
 async function createUsersFromCSV(filePath: string) {
   try {
     Logger.info(`Starting user creation process from CSV: ${filePath}`);
-    const users = await parseCSV(filePath);
+    const users = await readUsersFromFile(filePath);
     Logger.info(`Found ${users.length} users in CSV file`);
-    
+
     const createdUsers = await createUsers(users);
     Logger.info(`Successfully created ${createdUsers.length} users`);
-    
+
     await generateCSV(createdUsers);
     Logger.success('Process completed successfully');
   } catch (error) {
-    Logger.error('Process failed:', error);
+    Logger.error(`Process failed: ${error}`);
     throw error;
   }
 }
 
 // execute the script
-createUsersFromCSV(process.argv[2] || 'data/wundanyi.csv').catch((error) => {
-  Logger.error('Script failed:', error);
-  process.exit(1);
-});
+createUsersFromCSV(process.argv[2] || 'data/wundanyi.csv')
+  .catch((error) => {
+    Logger.error('Script failed:', error);
+  })
+  .finally(async () => {
+    try {
+      // Clean up Redis connection after all operations are complete
+      await RedisService.disconnect();
+    } finally {
+      process.exit(0); // Exit with success code if everything completed
+    }
+  });

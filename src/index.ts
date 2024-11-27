@@ -47,11 +47,6 @@ class App {
     await this.roleService.saveSupersetRoles(fetchedRoles);
   }
 
-  public async matchUsersToRoles() {
-    const users = await this.readUsersFromCSV();
-    await this.roleService.matchRolesToUsers(users);
-  }
-
   async createBaseRole() {
     const permissions = await this.permissionService.fetchBasePermissions();
 

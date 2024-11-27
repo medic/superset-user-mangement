@@ -183,17 +183,17 @@ export class RoleService {
   public async matchRolesToUsers(users: CSVUser[], roles: ParsedRole[]) {
     users.forEach((user) => {
       const res = this.matchRoles(user.chu, roles);
-      console.log(`Found ${res.length} roles for ${user.username}}`);
+      Logger.info(`Found ${res.length} roles for ${user.username}}`);
     });
   }
 
   public matchRoles(chuCodes: string, roles: ParsedRole[]): SupersetRole[] {
-    console.log(`${roles.length} roles available`);
+    Logger.info(`${roles.length} roles available`);
 
     const codes = chuCodes.split(',').map((code) => code.trim());
 
     return codes.flatMap((code) => {
-      console.log(code);
+     Logger.info(code);
 
       return roles
         .filter((role) => role.code === code)

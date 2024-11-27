@@ -6,24 +6,24 @@ import fs from "fs";
 import csv from "csv-parser";
 import { CSVUser } from "../types/user";
 
-export async function parseCSV(fileName: string): Promise<CSVUser[]> {
-  let csvUsers: CSVUser[] = []
+export async function readUsersFromFile(fileName: string): Promise<CSVUser[]> {
+  return new Promise((resolve, reject) => {
+    const csvUsers: CSVUser[] = [];
 
-  fs.createReadStream(fileName)
-    .on('error', () => {
-      throw new Error('File not found')
-    })
-    .pipe(csv())
-    .on('data', (data: CSVUser) => {
-      csvUsers.push(data);
-    })
-    .on('error', (error: Error) => {
-      console.log(error.message);
-    })
-    .on('end', () => {
-      console.log(csvUsers)
-      console.log(`Processed ${csvUsers.length} successfully`);
-    });
-
-  return csvUsers;
+    fs.createReadStream(fileName)
+      .on('error', (error) => {
+        reject(new Error(`File not found: ${error.message}`));
+      })
+      .pipe(csv())
+      .on('data', (data: CSVUser) => {
+        csvUsers.push(data);
+      })
+      .on('error', (error: Error) => {
+        reject(error);
+      })
+      .on('end', () => {
+        console.log(`Processed ${csvUsers.length} users successfully`);
+        resolve(csvUsers);
+      });
+  });
 }

@@ -7,6 +7,7 @@ import { ParsedRole, SupersetRole } from "../types/role";
 import fs from "fs";
 import csv from "csv-parser";
 import { RedisService } from "./redis-util";
+import { Logger } from '../utils/logger';
 
 export class RoleRepository {
 
@@ -29,12 +30,10 @@ export class RoleRepository {
           JSON.stringify(role.role),
         );
       }
-      console.log(`${roles.length} Roles saved to Redis successfully.`);
+      Logger.info(`${roles.length} Roles saved to Redis successfully.`);
     } catch (error) {
-      console.error('Error saving roles to Redis:', error);
+      Logger.error(`Error saving roles to Redis: ${error}`);
       throw error;
-    } finally {
-      await redisClient.disconnect();
     }
   }
 
@@ -49,21 +48,20 @@ export class RoleRepository {
       const keys = await redisClient.keys('*');
 
       for (const key of keys) {
-        const role = await redisClient.hGet(key, 'role');
-        const supersetRole = this.parseRoleString(role);
-
-        if (supersetRole) {
-          roles.push({ code: key, role: supersetRole });
+        const roleData = await redisClient.hGet(key, 'role');
+        if (roleData) {
+          roles.push({
+            code: key,
+            role: JSON.parse(roleData),
+          });
         }
       }
-    } catch (error) {
-      console.error('Error reading from Redis:', error);
-      throw error;
-    } finally {
-      await redisClient.disconnect();
-    }
 
-    return roles;
+      return roles;
+    } catch (error) {
+      Logger.error(`Error fetching roles from Redis: ${error}`);
+      throw error;
+    }
   }
 
   /**
