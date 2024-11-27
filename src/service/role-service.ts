@@ -8,20 +8,40 @@ import { RoleRepository } from "../repository/role-repository";
 import { RoleAdapter } from "../repository/role-adapter";
 import { CSVUser } from "../types/user";
 import { executeWithConcurrency, makeApiRequest, retryOperation } from "../utils/request.utils";
+import { Logger } from "../utils/logger";
 
-  /**
-   * Class responsible for managing roles in Superset.
-   *
-   * @remarks
-   * This class provides methods to fetch, create, update, and delete roles from
-   * Superset. It also provides a method to match roles to users based on chu codes.
-   */
+/**
+ * Class responsible for managing roles in Superset.
+ *
+ * @remarks
+ * This class provides methods to fetch, create, update, and delete roles from
+ * Superset. It also provides a method to match roles to users based on chu codes.
+ */
 export class RoleService {
   constructor(
     private readonly authService: AuthService = AuthService.getInstance(),
     private readonly roleStore: RoleRepository = new RoleRepository(),
     private readonly roleAdapter: RoleAdapter = new RoleAdapter(),
-  ) {}
+  ) { }
+
+  // fetch roles from Redis or Superset
+  async getRoles(): Promise<ParsedRole[]> {
+    const cachedRoles = await this.getSavedSupersetRoles();
+
+    if (cachedRoles.length > 0) {
+      Logger.info(`Fetched ${cachedRoles.length} roles from Redis`);
+      return cachedRoles;
+    } else {
+      Logger.info(`Fetching roles from Superset`);
+      const fetchedRoles = await this.fetchSupersetRoles();
+
+      //save roles for subsequent use
+      await this.saveSupersetRoles(fetchedRoles);
+      Logger.info(`Fetched ${fetchedRoles.length} and saved roles from Superset`);
+
+      return this.roleAdapter.toParsedRole(fetchedRoles);
+    }
+  }
 
   /**
    * Fetches Superset Roles by page
@@ -160,16 +180,14 @@ export class RoleService {
     return await this.roleStore.fetchRoles();
   }
 
-  public async matchRolesToUsers(users: CSVUser[]) {
-    const roles = await this.getSavedSupersetRoles();
-
+  public async matchRolesToUsers(users: CSVUser[], roles: ParsedRole[]) {
     users.forEach((user) => {
-      const res = this.getRoles(user.chu, roles);
+      const res = this.matchRoles(user.chu, roles);
       console.log(`Found ${res.length} roles for ${user.username}}`);
     });
   }
 
-  private getRoles(chuCodes: string, roles: ParsedRole[]): SupersetRole[] {
+  public matchRoles(chuCodes: string, roles: ParsedRole[]): SupersetRole[] {
     console.log(`${roles.length} roles available`);
 
     const codes = chuCodes.split(',').map((code) => code.trim());

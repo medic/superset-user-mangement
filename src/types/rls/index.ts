@@ -28,7 +28,7 @@ export interface Table {
 }
 
 export interface RLSEntity {
-  id: number;
+  chuCode: string;
   rls: RowLevelSecurity;
 }
 

@@ -1,4 +1,5 @@
 import { createClient, RedisClientType } from 'redis';
+import { Logger } from '../utils/logger';
 
 export class RedisService {
   private static redisClient: RedisClientType | null = null;
@@ -10,7 +11,7 @@ export class RedisService {
     if (!RedisService.redisClient) {
       RedisService.redisClient = createClient();
       RedisService.redisClient.on('error', (err) =>
-        console.error('Redis Client Error', err)
+        Logger.error('Redis Client Error', err)
       );
     }
 
@@ -27,10 +28,24 @@ export class RedisService {
       try {
         await RedisService.redisClient.disconnect();
         RedisService.isConnected = false;
-        console.log('Redis client disconnected successfully.');
+        Logger.info('Redis client disconnected successfully.');
       } catch (disconnectError) {
-        console.error('Error disconnecting Redis client:', disconnectError);
+        Logger.error(`Error disconnecting Redis client:  ${disconnectError}`);
       }
     }
+  }
+
+  // Save the table or permission ids to Redis
+  public static async saveEntityIds(key: string, ids: number[]): Promise<void> {
+    const client = await RedisService.getClient();
+    await client.set(key, JSON.stringify(ids));
+  }
+
+  // Retrieve the table or permission ids from Redis
+  public static async getEntityIds(key: string): Promise<number[] | null> {
+    const client = await RedisService.getClient();
+    const value = await client.get(key);
+    if (!value) return null;
+    return JSON.parse(value) as number[];
   }
 }

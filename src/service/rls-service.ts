@@ -1,14 +1,18 @@
 import { AuthService } from "./auth-service";
 import {
+  RLSEntity,
   RLSList,
   RowLevelSecurity,
   UpdateRLSRequest,
+  UpdateRLSResponse,
   UpdateResult,
 } from "../types/rls";
 import { makeApiRequest } from "../utils/request.utils";
 import { AxiosRequestConfig } from "axios";
 import rison from "rison";
-import { RlsRepository } from "../repository/rls-respository";
+import { RlsRepository } from "../repository/rls-repository";
+import { Logger } from "../utils/logger";
+import { create } from "domain";
 
 
 /**
@@ -19,10 +23,28 @@ import { RlsRepository } from "../repository/rls-respository";
  */
 export class RLSService {
 
-  readonly BASE_CHA_RLS_ID = 3051;
+  readonly BASE_COUNTY_RLS_ID = 3051;
   readonly BASE_CHU_RLS_ID = 3052;
 
   constructor(private readonly authService: AuthService = AuthService.getInstance()) { }
+
+  // fetch RLS policies from Redis or Superset
+  async getRLSPolicies(): Promise<RowLevelSecurity[]> {
+    const cachedRLS = await this.fetchSavedRLSPolicies();
+    if (cachedRLS.length > 0) {
+      Logger.info(`Fetched ${cachedRLS.length} RLS policies from Redis`);
+      return cachedRLS;
+    } else {
+      Logger.info(`Fetching RLS policies from Superset`);
+      const fetchedRLS = await this.fetchRLSPolicies();
+
+      //save roles for subsequent use
+      await this.saveRLSPolicies(fetchedRLS);
+      Logger.info(`Fetched ${fetchedRLS.length} and saved RLS policies from Superset`);
+
+      return fetchedRLS;
+    }
+  }
 
   /**
    * Fetches Superset Roles by page
@@ -95,17 +117,27 @@ export class RLSService {
   }
 
   /**
+   * Fetch RLS policies from Redis
+   */
+  async fetchSavedRLSPolicies(): Promise<RowLevelSecurity[]> {
+    const rlsRepo = new RlsRepository();
+    const rlsEntities = await rlsRepo.fetchRoles();
+
+    return rlsEntities.map(entity => entity.rls);
+  }
+
+  /**
    * Fetch base RLS policy
    */
-  async fetchBaseRLS(): Promise<RowLevelSecurity> {
-    return this.fetchRLSById(this.BASE_CHA_RLS_ID);
+  async fetchBaseRLS(id: number): Promise<RowLevelSecurity> {
+    return this.fetchRLSById(id);
   }
 
   /**
    * Fetch base CHA RLS policy tables
    */
-  async fetchBaseTables(): Promise<number[]> {
-    return this.fetchRLSTables(this.BASE_CHA_RLS_ID);
+  async fetchBaseCountyTables(): Promise<number[]> {
+    return this.fetchRLSTables(this.BASE_COUNTY_RLS_ID);
   }
 
   /**
@@ -246,4 +278,43 @@ export class RLSService {
       throw new Error(`Failed to update RLS tables: ${error}`);
     }
   }
+
+  /**
+   * Create a new RLS policy on Superset
+   */
+  async createRLSPolicy(policy: UpdateRLSRequest): Promise<UpdateRLSResponse> {
+    const headers = await this.authService.getHeaders();
+
+    const request: AxiosRequestConfig = {
+      method: 'POST',
+      headers: headers,
+      data: policy,
+    };
+
+    const response = await makeApiRequest(
+      `/rowlevelsecurity/`,
+      request,
+    );
+
+    const createdPolicy = response.data;
+    return createdPolicy as UpdateRLSResponse;
+  }
+
+  /**
+   * Match rls from chu code
+   */
+  private matchRLSFromCHUCode(chuCodes: string, rls: RLSEntity[]): RowLevelSecurity[]  {
+    console.log(`${rls.length} roles available`);
+
+    const codes = chuCodes.split(',').map((code) => code.trim());
+
+    return codes.flatMap((code) => {
+      console.log(code);
+
+      return rls
+        .filter((policy) => policy.chuCode === code)
+        .map((role) => role.rls);
+    });
+  }
+
 }

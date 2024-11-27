@@ -6,7 +6,7 @@ import { PermissionService } from "./service/permission-service";
 import { RoleService } from "./service/role-service";
 import { RedisService } from "./repository/redis-util";
 import { RLSService } from "./service/rls-service";
-import { UserManager } from './service/user-service';
+import { UserService } from './service/user-service';
 import { Logger } from './utils/logger';
 
 /**
@@ -15,20 +15,16 @@ import { Logger } from './utils/logger';
 class App {
   private readonly roleService: RoleService;
   private readonly rlsService: RLSService;
-  private readonly userManager: UserManager;
+  private readonly userManager: UserService;
   private readonly permissionService: PermissionService;
   private readonly filePath: string;
 
   constructor(filePath: string) {
     this.roleService = new RoleService();
     this.rlsService = new RLSService();
-    this.userManager = new UserManager();
+    this.userManager = new UserService();
     this.permissionService = new PermissionService();
     this.filePath = filePath;
-  }
-
-  async login() {
-    // Removed AuthService initialization and setAuthService usage
   }
 
   /**
@@ -83,12 +79,12 @@ class App {
     const rls = await this.rlsService.fetchRLSPolicies();
     console.log(`Fetched ${rls.length} RLSs`)
 
-    const countyRLS = await this.rlsService.filterByGroupKey(rls, 'chu_code');
-    console.log(`Fetched ${countyRLS.length} CHU RLSs`);
+    const chuRLS = await this.rlsService.filterByGroupKey(rls, 'chu_code');
+    console.log(`Fetched ${chuRLS.length} CHU RLSs`);
 
-    const rlsToUpdate = countyRLS.filter(policy => policy.id !== this.rlsService.BASE_CHA_RLS_ID);
+    const rlsToUpdate = chuRLS.filter(policy => policy.id !== this.rlsService.BASE_CHU_RLS_ID);
 
-    const tables = await this.rlsService.fetchBaseTables();
+    const tables = await this.rlsService.fetchBaseCountyTables();
     const results = await this.rlsService.updateRLSTables(tables, rlsToUpdate);
 
     console.log(`Updated ${results.length} CHU RLSs`);

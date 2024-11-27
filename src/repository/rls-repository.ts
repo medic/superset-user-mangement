@@ -19,7 +19,7 @@ export class RlsRepository {
 
     try {
       for (const entity of rlsEntities) {
-        await redisClient.hSet(entity.id.toString(), 'rls', JSON.stringify(entity.rls));
+        await redisClient.hSet(entity.chuCode, 'rls', JSON.stringify(entity.rls));
       }
     } catch (error) {
       console.error('Error saving RLS policies:', error);
@@ -45,7 +45,7 @@ export class RlsRepository {
         const rlsPolicy = this.parseRLSEntity(rlsEntity);
 
         if (rlsPolicy) {
-          rlsEntities.push({ id: parseInt(key), rls: rlsPolicy })
+          rlsEntities.push({ chuCode: key, rls: rlsPolicy })
         }
       }
     } catch (error) {
@@ -84,12 +84,12 @@ export class RlsRepository {
    * @param policies
    */
   public toRLSEntity(policies: RowLevelSecurity[]): RLSEntity[] {
-    return policies.map((policy) => {
-      return {
-        id: policy.id,
-        rls: policy
-      }
-    })
+    return policies
+      .map((policy) => {
+        const chuCode = this.extractCHUCode(policy.clause);
+        return chuCode ? { chuCode: chuCode, rls: policy } : null;
+      })
+      .filter((entity): entity is RLSEntity => entity !== null);
   }
 
   /**
@@ -98,6 +98,17 @@ export class RlsRepository {
   async fetchRLSPolicies(): Promise<RLSEntity[]> {
     const rlsRepo = new RlsRepository()
     return rlsRepo.fetchRLSPolicies()
+  }
+
+  /**
+   * Fetch chu from clause
+   * Clause format: `chu_code = ${chu_code}`
+   * @param clause 
+   * @returns 
+   */
+  private extractCHUCode(clause: string): string | null {
+    const chuCode = RegExp(/\d{6}/).exec(clause); //match any 6 consecutive digits
+    return chuCode ? chuCode[0] : null;
   }
 
 }

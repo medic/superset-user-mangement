@@ -2,39 +2,16 @@
  * Repository class to save convert, save and retrieve roles from Redis.
  */
 
-import {createClient, RedisClientType} from "redis";
-import {ParsedRole, SupersetRole} from "../types/role";
+import { RedisClientType } from "redis";
+import { ParsedRole, SupersetRole } from "../types/role";
 import fs from "fs";
 import csv from "csv-parser";
+import { RedisService } from "./redis-util";
 
 export class RoleRepository {
-  private readonly redisClient: RedisClientType;
-  private isConnected: boolean = false;
 
-  constructor() {
-    this.redisClient = createClient();
-    this.redisClient.on('error', (err) =>
-      console.log('Redis Client Error', err),
-    );
-  }
-
-  private async connectRedis() {
-    if (!this.isConnected) {
-      await this.redisClient.connect();
-      this.isConnected = true;
-    }
-  }
-
-  private async closeRedis() {
-    if (this.isConnected) {
-      try {
-        await this.redisClient.disconnect();
-        this.isConnected = false;
-        console.log('Redis client disconnected successfully.');
-      } catch (disconnectError) {
-        console.error('Error disconnecting Redis client:', disconnectError);
-      }
-    }
+  private async connectRedis(): Promise<RedisClientType> {
+    return await RedisService.getClient();
   }
 
   /**
@@ -42,11 +19,11 @@ export class RoleRepository {
    * @param roles Formatted version of Superset Role
    */
   public async saveRoles(roles: ParsedRole[]) {
-    await this.connectRedis();
+    const redisClient = await this.connectRedis();
 
     try {
       for (const role of roles) {
-        await this.redisClient.hSet(
+        await redisClient.hSet(
           role.code,
           'role',
           JSON.stringify(role.role),
@@ -57,7 +34,7 @@ export class RoleRepository {
       console.error('Error saving roles to Redis:', error);
       throw error;
     } finally {
-      await this.closeRedis();
+      await redisClient.disconnect();
     }
   }
 
@@ -65,15 +42,14 @@ export class RoleRepository {
    * Fetch roles from Redis
    */
   public async fetchRoles(): Promise<ParsedRole[]> {
-    await this.connectRedis();
+    const redisClient = await this.connectRedis();
     const roles: ParsedRole[] = [];
 
     try {
-      const keys = await this.redisClient.keys('*');
-      
+      const keys = await redisClient.keys('*');
 
-      for (const key of keys){
-        const role = await this.redisClient.hGet(key, 'role');
+      for (const key of keys) {
+        const role = await redisClient.hGet(key, 'role');
         const supersetRole = this.parseRoleString(role);
 
         if (supersetRole) {
@@ -84,7 +60,7 @@ export class RoleRepository {
       console.error('Error reading from Redis:', error);
       throw error;
     } finally {
-      await this.closeRedis();
+      await redisClient.disconnect();
     }
 
     return roles;

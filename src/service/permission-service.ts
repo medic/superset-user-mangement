@@ -1,6 +1,7 @@
 import axios, { AxiosRequestConfig } from 'axios';
 import { PermissionList, PermissionIds, UpdatePermissionResult, Permission } from '../types/permission';
 import { AuthService } from './auth-service';
+import { RedisService } from '../repository/redis-util';
 
   /**
    * Class to manage permissions for roles on Superset
@@ -73,8 +74,14 @@ export class PermissionService {
    * Fetches permissions from the base user. These will be applied to
    * all other users of the same type.
    */
-  public async fetchBasePermissions(){
-    const permService = new PermissionService();
-    return await permService.getPermissionsByRoleId();
+  public async fetchBasePermissions(): Promise<number[]> {
+    // first we check Redis for the permissions
+    const permissionIds = await RedisService.getEntityIds('base_cha_permissions');
+    if (permissionIds) return permissionIds;
+
+    // if not found, fetch from Superset
+    const permissions = await this.getPermissionsByRoleId();
+    await RedisService.saveEntityIds('base_cha_permissions', permissions);
+    return permissions;
   }
 }

@@ -23,3 +23,8 @@ export interface CSVUser {
   county: string;
   facility: string;
 }
+
+
+export interface CreateUserResponse {
+  result: User
+}

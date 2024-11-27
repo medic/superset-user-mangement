@@ -4,37 +4,32 @@
 
 import { AxiosRequestConfig } from "axios";
 import { AuthService } from "./auth-service";
-import { CSVUser, User } from "../types/user";
+import { CreateUserResponse, User } from "../types/user";
 import { makeApiRequest } from "../utils/request.utils";
+import { Logger } from "../utils/logger";
 
-export class UserManager {
+export class UserService {
 
   constructor(private readonly authService: AuthService = AuthService.getInstance()) {}
 
-  private generateSupersetUser(csvUser: CSVUser, roles: number[]): User {
-    const { first_name, last_name, email, username, password } = csvUser;
-
-    return {
-      active: true,
-      first_name,
-      last_name,
-      email,
-      username,
-      password,
-      roles: roles,
-    }
-  }
-
-  public async createUserOnSuperset(users: User[]){
+  public async createUserOnSuperset(users: User[]): Promise<CreateUserResponse[]> {
     const headers = await this.authService.getHeaders();
+
+    const createdUsers: CreateUserResponse[] = [];
 
     for (const user of users){
       const response = await makeApiRequest(
         `/security/users/`,
         this.generateRequest(user, headers)
       );
-      console.log(response);
+
+      const createdUser = response.data as CreateUserResponse;
+      Logger.success(`Created user: ${createdUser.result.username}`);
+
+      createdUsers.push(createdUser);
     }
+
+    return createdUsers;
   }
 
   private generateRequest(user: User, headers: any): AxiosRequestConfig {

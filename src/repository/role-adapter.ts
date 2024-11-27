@@ -11,7 +11,7 @@ export class RoleAdapter {
      * @returns
      * @param supersetRoles
      */
-  public async toParsedRole(supersetRoles: SupersetRole[]) {
+  public toParsedRole(supersetRoles: SupersetRole[]) {
     return supersetRoles
       .map(role => {
         const key = this.extractCHUCode(role.name);
@@ -24,7 +24,7 @@ export class RoleAdapter {
    * Role names come in a 6-digit prefix followed by the name of the chu
    * This function extracts the CHU code
    */
-  private extractCHUCode(roleName: string): string | null {
+  public extractCHUCode(roleName: string): string | null {
     const chuCode = RegExp(/\d{6}/).exec(roleName); //match any 6 consecutive digits
     return chuCode ? chuCode[0] : null;
   }
