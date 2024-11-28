@@ -12,6 +12,7 @@ import { RoleAdapter } from "../src/repository/role-adapter";
 import fs from "fs";
 import { readUsersFromFile } from "../src/repository/csv-util";
 import { RedisService } from "../src/repository/redis-util";
+import { create } from "domain";
 
 // Initialize services
 const roleService = new RoleService();
@@ -38,6 +39,10 @@ function validateCSVUser(user: CSVUser): string[] {
 async function createUsers(users: CSVUser[]): Promise<CreateUserResponse[]> {
   const usersToCreate: User[] = [];
   const roles = await roleService.getRoles();
+
+  if (roles.length === 0) {
+    throw new Error("No roles found");
+  }
 
   const sample = [users[0]];
   Logger.info(`Creating ${sample.length} users`);
@@ -214,6 +219,10 @@ async function createUsersFromCSV(filePath: string) {
 
     const createdUsers = await createUsers(users);
     Logger.info(`Successfully created ${createdUsers.length} users`);
+
+    if(createdUsers.length === 0) {
+      throw new Error('No users created');
+    }
 
     await generateCSV(createdUsers);
     Logger.success('Process completed successfully');

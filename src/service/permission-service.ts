@@ -1,12 +1,12 @@
-import axios, { AxiosRequestConfig } from 'axios';
 import { PermissionList, PermissionIds, UpdatePermissionResult, Permission } from '../types/permission';
 import { AuthService } from './auth-service';
 import { RedisService } from '../repository/redis-util';
 import { Logger } from '../utils/logger';
+import { API_URL, fetchWithAuth } from '../utils/request.utils';
 
-  /**
-   * Class to manage permissions for roles on Superset
-   */
+/**
+ * Class to manage permissions for roles on Superset
+ */
 export class PermissionService {
   private readonly DEFAULT_ROLE: number = 3051;
 
@@ -20,20 +20,16 @@ export class PermissionService {
   public async getPermissionsByRoleId(
     roleId: number = this.DEFAULT_ROLE,
   ): Promise<number[]> {
-    const headers = await this.authService.getHeaders();
-
-    const request: AxiosRequestConfig = {
-      method: 'GET',
-      headers: headers,
-    };
+    Logger.info(`Fetching permissions for role ${roleId}`);
 
     try {
-      const response = await axios(`/security/roles/${roleId}/permissions/`, request);
-      const permissionList = response.data as PermissionList;
+      const permissionList = await fetchWithAuth(
+        `${API_URL()}/security/roles/${roleId}/permissions/`
+      ) as PermissionList;
 
       return this.getPermissionIds(permissionList.result);
     } catch (error) {
-      console.error(`Failed to fetch permissions for role ${roleId}:`, error);
+      Logger.error(`Failed to fetch permissions for role ${roleId}: ${error}`);
       throw new Error(`Error fetching permissions for role ${roleId}`);
     }
   }
@@ -48,27 +44,20 @@ export class PermissionService {
     roleId: number,
     menuIds: PermissionIds,
   ) {
-    const headers = await this.authService.getHeaders();
-
-    console.log(`Updating permissions for ${roleId} with ${menuIds.permission_view_menu_ids.length} permissions`);
-
-    const request: AxiosRequestConfig = {
-      method: 'POST',
-      headers: headers,
-      data: menuIds,
-    };
-
     try {
-      const response = await axios(`/security/roles/${roleId}/permissions`, request);
-      return response.data as UpdatePermissionResult;
+      const response = await fetchWithAuth(
+        `${API_URL()}/security/roles/${roleId}/permissions/`, 
+        {
+          method: 'POST',
+          body: JSON.stringify(menuIds)
+        }
+      ) as UpdatePermissionResult;
+
+      return response;
     } catch (error) {
-      console.error(`Failed to update permissions for role ${roleId}:`, error);
+      Logger.error(`Failed to update permissions for role ${roleId}: ${error}`);
       throw new Error(`Error updating permissions for role ${roleId}`);
     }
-  }
-
-  private getPermissionIds(permissions: Permission[]): number[] {
-    return permissions.map((permission) => permission.id);
   }
 
   /**
@@ -82,9 +71,14 @@ export class PermissionService {
     const permissionIds = await RedisService.getEntityIds('base_cha_permissions');
     if (permissionIds) return permissionIds;
 
+    Logger.info('Permissions not found in Redis, fetching from Superset');
     // if not found, fetch from Superset
     const permissions = await this.getPermissionsByRoleId();
     await RedisService.saveEntityIds('base_cha_permissions', permissions);
     return permissions;
+  }
+
+  private getPermissionIds(permissions: Permission[]): number[] {
+    return permissions.map((permission) => permission.id);
   }
 }

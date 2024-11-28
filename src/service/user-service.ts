@@ -2,41 +2,35 @@
  * Class for handling creation of user accounts on Superset
  */
 
-import { AxiosRequestConfig } from "axios";
 import { AuthService } from "./auth-service";
 import { CreateUserResponse, User } from "../types/user";
-import { makeApiRequest } from "../utils/request.utils";
 import { Logger } from "../utils/logger";
+import { API_URL, fetchWithAuth } from '../utils/request.utils';
 
 export class UserService {
 
   constructor(private readonly authService: AuthService = AuthService.getInstance()) {}
 
   public async createUserOnSuperset(users: User[]): Promise<CreateUserResponse[]> {
-    const headers = await this.authService.getHeaders();
-
     const createdUsers: CreateUserResponse[] = [];
 
     for (const user of users){
-      const response = await makeApiRequest(
-        `/security/users/`,
-        this.generateRequest(user, headers)
-      );
+      try {
+        const createdUser = await fetchWithAuth(`${API_URL()}/security/users/`, {
+          method: 'POST',
+          body: JSON.stringify(user)
+        }) as CreateUserResponse;
 
-      const createdUser = response.data as CreateUserResponse;
-      Logger.success(`Created user: ${createdUser.result.username}`);
+        Logger.success(`Created user: ${createdUser.result.username}`);
 
-      createdUsers.push(createdUser);
+        createdUsers.push(createdUser);
+      } catch (error) {
+        // You might want to add error handling here
+        Logger.error(`Error creating user ${user.username}: ${error}`);
+      }
     }
 
     return createdUsers;
   }
 
-  private generateRequest(user: User, headers: any): AxiosRequestConfig {
-    return {
-      method: 'POST',
-      headers: headers,
-      data: user,
-    };
-  }
 }

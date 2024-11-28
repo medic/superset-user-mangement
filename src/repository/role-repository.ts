@@ -1,8 +1,6 @@
 /**
  * Repository class to save convert, save and retrieve roles from Redis.
  */
-
-import { RedisClientType } from "redis";
 import { ParsedRole, SupersetRole } from "../types/role";
 import fs from "fs";
 import csv from "csv-parser";
@@ -11,24 +9,14 @@ import { Logger } from '../utils/logger';
 
 export class RoleRepository {
 
-  private async connectRedis(): Promise<RedisClientType> {
-    return await RedisService.getClient();
-  }
-
   /**
    * Persist roles in Redis with the CHU code as the key
    * @param roles Formatted version of Superset Role
    */
   public async saveRoles(roles: ParsedRole[]) {
-    const redisClient = await this.connectRedis();
-
     try {
       for (const role of roles) {
-        await redisClient.hSet(
-          role.code,
-          'role',
-          JSON.stringify(role.role),
-        );
+        await RedisService.saveHashData(role.code, 'role', role.role);
       }
       Logger.info(`${roles.length} Roles saved to Redis successfully.`);
     } catch (error) {
@@ -41,18 +29,18 @@ export class RoleRepository {
    * Fetch roles from Redis
    */
   public async fetchRoles(): Promise<ParsedRole[]> {
-    const redisClient = await this.connectRedis();
+    const redisClient = await RedisService.getClient();
     const roles: ParsedRole[] = [];
 
     try {
-      const keys = await redisClient.keys('*');
+      const keys = await redisClient.keys('hash:*');
 
       for (const key of keys) {
-        const roleData = await redisClient.hGet(key, 'role');
+        const roleData = await RedisService.getHashData<SupersetRole>(key.replace('hash:', ''), 'role');
         if (roleData) {
           roles.push({
-            code: key,
-            role: JSON.parse(roleData),
+            code: key.replace('hash:', ''),
+            role: roleData,
           });
         }
       }

@@ -7,13 +7,10 @@ import {
   UpdateRLSResponse,
   UpdateResult,
 } from "../types/rls";
-import { makeApiRequest } from "../utils/request.utils";
-import { AxiosRequestConfig } from "axios";
+import { Logger } from '../utils/logger';
+import { API_URL, fetchWithAuth } from '../utils/request.utils';
 import rison from "rison";
 import { RlsRepository } from "../repository/rls-repository";
-import { Logger } from "../utils/logger";
-import { create } from "domain";
-
 
 /**
  * Service class to manage Row Level Security (RLS) for roles.
@@ -51,23 +48,18 @@ export class RLSService {
    */
   public async fetchRLSPolicies(): Promise<RowLevelSecurity[]> {
     try {
-      const headers = await this.authService.getHeaders();
       let currentPage = 0;
       let policies: RowLevelSecurity[] = [];
 
       while (true) {
         const queryParams = rison.encode({ page: currentPage, page_size: 100 });
-        const request: AxiosRequestConfig = {
-          method: "GET",
-          headers: headers,
-        };
+       
+        const url = `${API_URL()}/rowlevelsecurity/?q=${queryParams}`;
+        const response = await fetchWithAuth(url, {
+          method: 'GET',
+        });
 
-        const response = await makeApiRequest(
-          `/rowlevelsecurity/?q=${queryParams}`,
-          request,
-        );
-
-        const rlsList: RLSList = response.data;
+        const rlsList: RLSList = await response.json();
 
         if (!rlsList?.result) {
           throw new Error('Failed to fetch RLS policies: Invalid response format');
@@ -152,18 +144,12 @@ export class RLSService {
    * @param rlsId - ID of the RLS policy to fetch
    */
   async fetchRLSById(rlsId: number): Promise<RowLevelSecurity> {
-    const headers = await this.authService.getHeaders();
-    const request: AxiosRequestConfig = {
-      method: "GET",
-      headers: headers,
-    };
+    const url = `${API_URL()}/rowlevelsecurity/${rlsId}`;
+    const response = await fetchWithAuth(url, {
+      method: 'GET',
+    });
 
-    const response = await makeApiRequest(
-      `/rowlevelsecurity/${rlsId}`,
-      request,
-    );
-
-    const policy = response.data;
+    const policy = await response.json();
     return policy.result as RowLevelSecurity;
   }
 
@@ -184,7 +170,6 @@ export class RLSService {
    * @throws Error if the update fails
    */
   async updateRLSTables(tables: number[], policies: RowLevelSecurity[]): Promise<UpdateResult[]> {
-    const headers = await this.authService.getHeaders();
     const results: UpdateResult[] = [];
     const failedUpdates: RowLevelSecurity[] = [];
     const BATCH_SIZE = 20;
@@ -212,18 +197,14 @@ export class RLSService {
                 tables: tables // Update with new table IDs
               };
 
-              const request: AxiosRequestConfig = {
+              // Update the RLS policy
+              const url = `${API_URL()}/rowlevelsecurity/${policy.id}`;
+              const response = await fetchWithAuth(url, {
                 method: 'PUT',
-                headers: headers,
-                data: updateRequest,
-              };
+                body: JSON.stringify(updateRequest)
+              });
 
-              const response = await makeApiRequest(
-                `/rowlevelsecurity/${policy.id}`,
-                request
-              );
-
-              const updateResponse = response.data;
+              const updateResponse = await response.json();
 
               if (updateResponse.id) {
                 results.push({
@@ -283,38 +264,13 @@ export class RLSService {
    * Create a new RLS policy on Superset
    */
   async createRLSPolicy(policy: UpdateRLSRequest): Promise<UpdateRLSResponse> {
-    const headers = await this.authService.getHeaders();
-
-    const request: AxiosRequestConfig = {
+    const url = `${API_URL()}/rowlevelsecurity/`;
+    const response = await fetchWithAuth(url, {
       method: 'POST',
-      headers: headers,
-      data: policy,
-    };
-
-    const response = await makeApiRequest(
-      `/rowlevelsecurity/`,
-      request,
-    );
-
-    const createdPolicy = response.data;
-    return createdPolicy as UpdateRLSResponse;
-  }
-
-  /**
-   * Match rls from chu code
-   */
-  private matchRLSFromCHUCode(chuCodes: string, rls: RLSEntity[]): RowLevelSecurity[]  {
-    console.log(`${rls.length} roles available`);
-
-    const codes = chuCodes.split(',').map((code) => code.trim());
-
-    return codes.flatMap((code) => {
-      console.log(code);
-
-      return rls
-        .filter((policy) => policy.chuCode === code)
-        .map((role) => role.rls);
+      body: JSON.stringify(policy)
     });
+    const createdPolicy = await response.json();
+    return createdPolicy as UpdateRLSResponse;
   }
 
 }

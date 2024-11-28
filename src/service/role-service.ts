@@ -1,5 +1,4 @@
 import rison from "rison";
-import { AxiosRequestConfig } from "axios";
 import { PermissionService } from "./permission-service";
 import { CreateRoleResponse, ParsedRole, RoleList, SupersetRole } from "../types/role";
 import { PermissionIds } from "../types/permission";
@@ -7,7 +6,7 @@ import { AuthService } from "./auth-service";
 import { RoleRepository } from "../repository/role-repository";
 import { RoleAdapter } from "../repository/role-adapter";
 import { CSVUser } from "../types/user";
-import { executeWithConcurrency, makeApiRequest, retryOperation } from "../utils/request.utils";
+import { API_URL, executeWithConcurrency, retryOperation, fetchWithAuth } from "../utils/request.utils";
 import { Logger } from "../utils/logger";
 
 /**
@@ -47,39 +46,28 @@ export class RoleService {
    * Fetches Superset Roles by page
    */
   public async fetchSupersetRoles() {
-    const headers = await this.authService.getHeaders();
-
-    console.log("Headers fetched successfully");
-
     let currentPage = 0;
     let roles: SupersetRole[] = [];
 
-    const request: AxiosRequestConfig = {
-      method: "GET",
-      headers: headers,
-    };
-
     while (true) {
       const queryParams = rison.encode({ page: currentPage, page_size: 100 });
-      const roleList: RoleList = (await makeApiRequest(
-        `/security/roles?q=${queryParams}`,
-        request,
-      )) as RoleList;
+      try {
+        const roleList = await fetchWithAuth(`${API_URL()}/security/roles?q=${queryParams}`) as RoleList;
+        roles = roles.concat(roleList.result);
 
-      // Append roles from the current page to the allRoles array
-      roles = roles.concat(roleList.result);
+        Logger.info(`Fetched ${roleList.result.length} roles from page ${currentPage}`);
+        Logger.info(`${roles.length} roles fetched so far`);
 
-      console.log(`Fetched ${roleList.result.length} roles from page ${currentPage} \n
-      ${roles.length} fetched so far`);
+        if (roleList.result.length === 0) {
+          Logger.info(`Reached page ${currentPage}. No more roles to fetch.`);
+          break;
+        }
 
-      // If there are no more roles on the current page, break out of the loop
-      if (roleList.result.length === 0) {
-        console.log(`Reached page ${currentPage}. No more roles to fetch.`);
+        currentPage++;
+      } catch (error) {
+        Logger.error(`Error fetching roles: ${error}`);
         break;
       }
-
-      // Increment the page value for the next request
-      currentPage++;
     }
 
     return roles;
@@ -114,16 +102,16 @@ export class RoleService {
     const initialTasks = roles.map((role) => () => updateRole(role));
     await executeWithConcurrency(initialTasks, 10); // Concurrency limit of 10
 
-    console.log('Initial update completed. Successful updates:', Array.from(updatedRoles));
+    Logger.info('Initial update completed. Successful updates:', Array.from(updatedRoles));
 
     // Retry failed roles
     const failedRoles = roles.filter(role => !updatedRoles.has(role.id!));
-    console.log('Retrying failed roles:', failedRoles.map(role => role.id));
+    Logger.info('Retrying failed roles:', failedRoles.map(role => role.id));
 
     if (failedRoles.length > 0) {
       const retryTasks = failedRoles.map((role) => () => updateRole(role));
       await executeWithConcurrency(retryTasks, 10);
-      console.log('Retry update completed. Final successful updates:', Array.from(updatedRoles));
+      Logger.info('Retry update completed. Final successful updates:', Array.from(updatedRoles));
     }
 
     return Array.from(updatedRoles);
@@ -137,28 +125,32 @@ export class RoleService {
     const headers = await this.authService.getHeaders();
 
     const createRoleRequest = async (name: string) => {
-      const request: AxiosRequestConfig = {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Accept': 'application/json'
-        },
-        data: { name: name },
-      };
+      Logger.info(`Creating role ${name}`);
 
-      console.log(`Creating role ${name}`);
+      try {
+        const url = `${API_URL()}/security/roles/`;
+        const requestConfig = {
+          headers: headers,
+        };  
 
-      const response = (await makeApiRequest(
-        `/security/roles/`,
-        request,
-      )) as CreateRoleResponse;
-      return response;
+        const response = await fetchWithAuth(url, {
+          method: 'POST',
+          body: JSON.stringify({ name }),
+          headers: requestConfig.headers
+        });
+        const roleResponse: CreateRoleResponse = await response.json();
+        
+        return roleResponse;
+      } catch (error) {
+        Logger.error(`Failed to create role ${name}: ${error}`);
+        throw new Error(`Error creating role ${name}: ` + error);
+      }
     };
 
     const rolesPromises = names.map((name) =>
       createRoleRequest(name).catch((error) => {
-        console.error(`Failed to create role ${name}:`, error);
-        throw new Error(error);
+        Logger.error(`Failed to create role ${name}:`, error);
+        throw new Error(`Error creating role ${name}: ` + error);
       }),
     );
 

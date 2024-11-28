@@ -44,17 +44,60 @@ export class RedisService {
     }
   }
 
-  // Save the table or permission ids to Redis
-  public static async saveEntityIds(key: string, ids: number[]): Promise<void> {
+  // Save array data as a string in Redis
+  public static async saveArrayData(key: string, data: any[]): Promise<void> {
     const client = await this.getClient();
-    await client.set(key, JSON.stringify(ids));
+    try {
+      await client.set(`array:${key}`, JSON.stringify(data));
+    } catch (error) {
+      Logger.error(`Error saving array data to Redis: ${error}`);
+      throw error;
+    }
   }
 
-  // Retrieve the table or permission ids from Redis
-  public static async getEntityIds(key: string): Promise<number[] | null> {
+  // Retrieve array data from Redis
+  public static async getArrayData<T>(key: string): Promise<T[] | null> {
     const client = await this.getClient();
-    const value = await client.get(key);
-    if (!value) return null;
-    return JSON.parse(value) as number[];
+    try {
+      const value = await client.get(`array:${key}`);
+      if (!value) return null;
+      return JSON.parse(value) as T[];
+    } catch (error) {
+      Logger.error(`Error retrieving array data from Redis: ${error}`);
+      return null;
+    }
+  }
+
+  // Save hash data in Redis
+  public static async saveHashData(key: string, field: string, data: any): Promise<void> {
+    const client = await this.getClient();
+    try {
+      await client.hSet(`hash:${key}`, field, JSON.stringify(data));
+    } catch (error) {
+      Logger.error(`Error saving hash data to Redis: ${error}`);
+      throw error;
+    }
+  }
+
+  // Retrieve hash data from Redis
+  public static async getHashData<T>(key: string, field: string): Promise<T | null> {
+    const client = await this.getClient();
+    try {
+      const value = await client.hGet(`hash:${key}`, field);
+      if (!value) return null;
+      return JSON.parse(value) as T;
+    } catch (error) {
+      Logger.error(`Error retrieving hash data from Redis: ${error}`);
+      return null;
+    }
+  }
+
+  // For backward compatibility
+  public static async saveEntityIds(key: string, ids: number[]): Promise<void> {
+    return this.saveArrayData(key, ids);
+  }
+
+  public static async getEntityIds(key: string): Promise<number[] | null> {
+    return this.getArrayData<number>(key);
   }
 }

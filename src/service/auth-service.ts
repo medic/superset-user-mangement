@@ -1,7 +1,8 @@
 import { LoginRequest } from '../types/auth';
 import { SUPERSET } from '../config';
-import { makeApiRequest } from '../utils/request.utils';
 import { Logger } from '../utils/logger';
+import { API_URL } from '../utils/request.utils';
+import fetch from 'node-fetch';
 
 /**
  * Class for handling authentication on Superset.
@@ -32,20 +33,27 @@ export class AuthService {
       refresh: true
     };
 
-    const response = await makeApiRequest(
-      `/security/login`,
-      {
-        method: 'post',
-        data: body,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    Logger.info(`Login request: ${JSON.stringify(body)}`);
 
-    this.refreshToken = response.data.refresh_token;
+    const url = `${API_URL()}/security/login`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Login failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    this.refreshToken = data.refresh_token;
 
     return {
-      bearerToken: response.data.access_token,
-      refreshToken: response.data.refresh_token,
+      bearerToken: data.access_token,
+      refreshToken: data.refresh_token,
     };
   }
 
@@ -68,18 +76,21 @@ export class AuthService {
       this.isRefreshing = true;
       Logger.info('Refreshing access token...');
 
-      const response = await makeApiRequest(
-        `/security/refresh`,
-        {
-          method: 'post',
-          headers: {
-            'Authorization': `Bearer ${this.refreshToken}`,
-            'Content-Type': 'application/json'
-          }
+      const url = `${SUPERSET.baseURL}${SUPERSET.apiPath}/security/refresh`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.refreshToken}`,
+          'Content-Type': 'application/json'
         }
-      );
+      });
 
-      const newAccessToken = response.data.access_token;
+      if (!response.ok) {
+        throw new Error(`Token refresh failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const newAccessToken = data.access_token;
 
       // Notify all subscribers about the new token
       this.refreshSubscribers.forEach(callback => callback(newAccessToken));
@@ -112,21 +123,23 @@ export class AuthService {
   }
 
   private readonly getCSRFToken = async (bearerToken: string): Promise<{ token: string; cookie: string }> => {
-    const response = await makeApiRequest(
-      `/security/csrf_token/`,
-      {
-        method: 'get',
-        headers: {
-          Authorization: `Bearer ${bearerToken}`,
-          'X-Request-With': 'XMLHttpRequest'
-        },
-      }
-    );
+    const response = await fetch(`${SUPERSET.baseURL}${SUPERSET.apiPath}/security/csrf_token/`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${bearerToken}`,
+        'X-Request-With': 'XMLHttpRequest'
+      },
+    });
 
-    const csrfCookie = response.headers?.['set-cookie']?.[0] ?? '';
+    if (!response.ok) {
+      throw new Error(`CSRF token fetch failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const csrfCookie = response.headers.get('set-cookie') || '';
     
     return {
-      token: response.data.result,
+      token: data.result,
       cookie: csrfCookie
     };
   };
@@ -136,22 +149,26 @@ export class AuthService {
     csrfToken: string,
     cookie: string,
   ) => ({
-    Authorization: `Bearer ${bearerToken}`,
-    'Content-Type': 'application/json',
-    'X-CSRFToken': csrfToken,
-    Cookie: cookie,
+      Authorization: `Bearer ${bearerToken}`,
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken,
+      Cookie: cookie,
   });
 
   public async getHeaders() {
     // Check if headers are already cached
     if (this.headers) {
+      Logger.info('Using cached headers');
       return this.headers;
     }
 
     try {
       // Fetch new tokens
+      Logger.info('Fetching new headers');
       const { bearerToken } = await this.login();
       await this.updateHeaders(bearerToken);
+      Logger.success('Successfully fetched headers');
+      
       return this.headers;
     } catch (error) {
       Logger.error(`Error during getHeaders:, ${error}`);
