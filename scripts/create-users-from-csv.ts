@@ -7,12 +7,11 @@ import { generateUsername } from "../src/utils/string.utils";
 import { Logger } from "../src/utils/logger";
 import { PermissionService } from "../src/service/permission-service";
 import { UpdateRLSRequest } from "../src/types/rls";
-import { SupersetRole } from "../src/types/role";
+import { ParsedRole, SupersetRole } from "../src/types/role";
 import { RoleAdapter } from "../src/repository/role-adapter";
 import fs from "fs";
 import { readUsersFromFile } from "../src/repository/csv-util";
 import { RedisService } from "../src/repository/redis-util";
-import { create } from "domain";
 
 // Initialize services
 const roleService = new RoleService();
@@ -36,58 +35,57 @@ function validateCSVUser(user: CSVUser): string[] {
 }
 
 // create users
-async function createUsers(users: CSVUser[]): Promise<CreateUserResponse[]> {
-  const usersToCreate: User[] = [];
-  const roles = await roleService.getRoles();
+async function prepareUserData(csvUser: CSVUser, roles: ParsedRole[]): Promise<User | null> {
+  const errors = validateCSVUser(csvUser);
+  if (errors.length > 0) {
+    Logger.error(`User ${csvUser.username} is invalid: ${errors.join(", ")}`);
+    return null;
+  }
 
+  return {
+    active: true,
+    first_name: csvUser.first_name,
+    last_name: csvUser.last_name,
+    email: csvUser.email,
+    username: csvUser.username || generateUsername(csvUser.first_name, csvUser.last_name),
+    password: csvUser.password || generatePassword(10),
+    roles: await getRoleIds(csvUser.chu, roles)
+  };
+}
+
+async function getRoleIds(chuCode: string, existingRoles: ParsedRole[]): Promise<number[]> {
+  const supersetRoles = roleService.matchRoles(chuCode, existingRoles);
+  const permissions = await getChaPermissions();
+
+  if (supersetRoles.length === 0) {
+    Logger.info('Found no existing roles, creating new roles');
+    return createRoles(chuCode, permissions);
+  }
+
+  Logger.info('Found existing roles, updating permissions');
+  await updateRolesAndPolicies(supersetRoles, permissions);
+  return supersetRoles.map(role => role.id);
+}
+
+async function createUsers(users: CSVUser[]): Promise<CreateUserResponse[]> {
+  const roles = await roleService.getRoles();
   if (roles.length === 0) {
     throw new Error("No roles found");
   }
 
+  // Only process the first user as a sample
   const sample = [users[0]];
-  Logger.info(`Creating ${sample.length} users`);
+  Logger.info(`Creating ${sample.length} sample user`);
+  
+  const userPromises = sample.map(user => prepareUserData(user, roles));
+  const preparedUsers = (await Promise.all(userPromises)).filter((user): user is User => user !== null);
 
-  for (const user of sample) {
-    const errors = validateCSVUser(user);
-    if (errors.length > 0) {
-      Logger.error(`User ${user.username} is invalid: ${errors.join(", ")}`);
-      continue;
-    }
-
-    const password = user.password || generatePassword(10);
-    const username = user.username || generateUsername(user.first_name, user.last_name);
-    const supersetRoles = roleService.matchRoles(user.chu, roles);
-
-    let roleIds = supersetRoles.map((role) => role.id);
-    const permissions = await getChaPermissions();
-
-    // check if there are any role ids and create the associated role if none exists
-    if (roleIds.length === 0) {
-      Logger.info('Found no existing roles, creating new roles');
-      roleIds = await createRoles(user.chu, permissions);
-    } else {
-      Logger.info('Found existing roles');
-      // we update the role permissions and create the rls policies
-      updateRolesAndPolicies(supersetRoles, permissions);
-    }
-
-    const newUser: User = {
-      active: true,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      email: user.email,
-      username,
-      password,
-      roles: roleIds,
-    };
-
-    Logger.info(`Creating user: ${JSON.stringify(newUser, null, 2)}`);
-
-    usersToCreate.push(newUser);
+  if (preparedUsers.length === 0) {
+    throw new Error("Sample user is invalid");
   }
 
-  const userService = new UserService();
-  return await userService.createUserOnSuperset(usersToCreate);
+  Logger.info(`Creating sample user: ${JSON.stringify(preparedUsers[0], null, 2)}`);
+  return new UserService().createUserOnSuperset(preparedUsers);
 }
 
 // create roles
@@ -148,7 +146,7 @@ async function createRLSPolicies(policies: Array<{ code: string, roleIds: number
       name: rlsName,
       group_key: baseRLSPolicy.group_key,
       clause: 'chu_code=' + code,
-      description: baseRLSPolicy.description,
+      description: 'RLS Policy for CHU ' + code,
       filter_type: baseRLSPolicy.filter_type,
       roles: roleIds,
       tables: baseRLSPolicy.tables.map(table => table.id)
@@ -164,6 +162,7 @@ async function updateRolesAndPolicies(supersetRoles: SupersetRole[], permissions
 
   const rlsService = new RLSService();
   const baseRLSPolicy = await rlsService.fetchBaseRLS(rlsService.BASE_CHU_RLS_ID);
+  Logger.info('Fetched base RLS policy');
 
   // create RLS policies with associated roles
   const rlsPolicies = supersetRoles.map(role => {
@@ -173,19 +172,20 @@ async function updateRolesAndPolicies(supersetRoles: SupersetRole[], permissions
       name: `cha_${chuCode}`,
       group_key: baseRLSPolicy.group_key,
       clause: 'chu_code=' + chuCode,
-      description: baseRLSPolicy.description,
+      description: 'RLS Policy for CHU ' + chuCode,
       filter_type: baseRLSPolicy.filter_type,
       roles: [role.id],
       tables: baseRLSPolicy.tables.map(table => table.id)
     };
   });
+  Logger.info(`Creating ${rlsPolicies.length} RLS policies with request bodies: ${JSON.stringify(rlsPolicies, null, 2)}`);
 
   await Promise.all(rlsPolicies.map(request => rlsService.createRLSPolicy(request)));
   Logger.info(`Created RLS policies for roles: ${supersetRoles.map(role => role.name).join(', ')}`);
 }
 
 // generate a csv of user details
-async function generateCSV(users: CreateUserResponse[]) {
+async function generateCSV(users: CreateUserResponse[], filePath: string) {
   const csv = users.map(user => {
     return {
       username: user.result.username,
@@ -199,13 +199,14 @@ async function generateCSV(users: CreateUserResponse[]) {
   // write csv to file
   // Convert to CSV string
   const csvString = csv.map(row => Object.values(row).join(',')).join('\n');
+  const fileName = getFileName(filePath);
 
   // Write file using Node.js method
-  fs.writeFile('users.csv', csvString, 'utf8', (err) => {
+  fs.writeFile(fileName, csvString, 'utf8', (err) => {
     if (err) {
       Logger.error(err);
     } else {
-      Logger.success('CSV file created successfully');
+      Logger.success(`CSV file created successfully at ${fileName}`);
     }
   });
 }
@@ -224,12 +225,17 @@ async function createUsersFromCSV(filePath: string) {
       throw new Error('No users created');
     }
 
-    await generateCSV(createdUsers);
+    await generateCSV(createdUsers, filePath);
     Logger.success('Process completed successfully');
   } catch (error) {
     Logger.error(`Process failed: ${error}`);
     throw error;
   }
+}
+
+// generate a filename from file path by suffixing with -users
+const getFileName = (filePath: string) => {
+  return filePath.split('.')[0] + '-users.csv';
 }
 
 // execute the script

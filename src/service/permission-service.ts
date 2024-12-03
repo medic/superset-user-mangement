@@ -10,7 +10,7 @@ import { API_URL, fetchWithAuth } from '../utils/request.utils';
 export class PermissionService {
   private readonly DEFAULT_ROLE: number = 3051;
 
-  constructor(private readonly authService: AuthService = AuthService.getInstance()) {}
+  constructor() {}
 
   /**
    * Fetch permissions for a given role from Superset by roleId
@@ -46,7 +46,7 @@ export class PermissionService {
   ) {
     try {
       const response = await fetchWithAuth(
-        `${API_URL()}/security/roles/${roleId}/permissions/`, 
+        `${API_URL()}/security/roles/${roleId}/permissions`, 
         {
           method: 'POST',
           body: JSON.stringify(menuIds)

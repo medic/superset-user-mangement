@@ -59,7 +59,7 @@ export class RLSService {
           method: 'GET',
         });
 
-        const rlsList: RLSList = await response.json();
+        const rlsList: RLSList = response as RLSList;
 
         if (!rlsList?.result) {
           throw new Error('Failed to fetch RLS policies: Invalid response format');
@@ -149,8 +149,7 @@ export class RLSService {
       method: 'GET',
     });
 
-    const policy = await response.json();
-    return policy.result as RowLevelSecurity;
+    return response.result as RowLevelSecurity;
   }
 
   /**
@@ -160,6 +159,68 @@ export class RLSService {
   async fetchRLSTables(rlsId: number): Promise<number[]> {
     const policy = await this.fetchRLSById(rlsId);
     return policy.tables.map(table => table.id);
+  }
+
+  /**
+   * Fetches a RLS policy by name
+   * @param name - The name of the RLS policy to fetch
+   * @returns Promise<RowLevelSecurity | null>
+   */
+  public async getRLSByName(name: string): Promise<RowLevelSecurity | null> {
+    try {
+      const filters = {
+        filters: [{
+          col: "name",
+          opr: "eq",
+          value: name
+        }]
+      };
+      
+      const risonQuery = rison.encode(filters);
+      const response = await fetchWithAuth(
+        `${API_URL()}/api/v1/rowlevelsecurity/?q=${risonQuery}`
+      ) as RLSList;
+
+      if (response.count !== 0 && response.result.length > 0) {
+        return response.result[0];
+      }
+      
+      return null;
+    } catch (error) {
+      Logger.error(`Error fetching RLS by name: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches multiple RLS policies by their names
+   * @param names - Array of RLS policy names to fetch
+   * @returns Promise<RowLevelSecurity[]>
+   */
+  public async getRLSByNames(names: string[]): Promise<RowLevelSecurity[]> {
+    try {
+      const filters = {
+        filters: [{
+          col: "name",
+          opr: "in",
+          value: names
+        }]
+      };
+      
+      const risonQuery = rison.encode(filters);
+      const response = await fetchWithAuth(
+        `${API_URL()}/api/v1/rowlevelsecurity/?q=${risonQuery}`
+      ) as RLSList;
+
+      if (response.count !== 0 && response.result.length > 0) {
+        return response.result;
+      }
+      
+      return [];
+    } catch (error) {
+      Logger.error(`Error fetching RLS by names: ${error}`);
+      throw error;
+    }
   }
 
   /**
@@ -202,13 +263,11 @@ export class RLSService {
               const response = await fetchWithAuth(url, {
                 method: 'PUT',
                 body: JSON.stringify(updateRequest)
-              });
+              }) as UpdateResult;
 
-              const updateResponse = await response.json();
-
-              if (updateResponse.id) {
+              if (response.id) {
                 results.push({
-                  id: updateResponse.id,
+                  id: response.id,
                   status: 'success',
                   message: `Successfully updated RLS policy ${policy.name}`
                 });
@@ -269,8 +328,7 @@ export class RLSService {
       method: 'POST',
       body: JSON.stringify(policy)
     });
-    const createdPolicy = await response.json();
-    return createdPolicy as UpdateRLSResponse;
+    return response as UpdateRLSResponse;
   }
 
 }

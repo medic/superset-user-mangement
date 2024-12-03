@@ -89,6 +89,7 @@ export class RoleService {
     // Function to handle updating a single role
     const updateRole = async (role: SupersetRole) => {
       if (!role.id) throw new Error('No ID provided for role');
+
       await retryOperation(
         () => permissionManager.updatePermissions(role.id, ids),
         3, // retries
@@ -106,9 +107,9 @@ export class RoleService {
 
     // Retry failed roles
     const failedRoles = roles.filter(role => !updatedRoles.has(role.id!));
-    Logger.info('Retrying failed roles:', failedRoles.map(role => role.id));
 
     if (failedRoles.length > 0) {
+      Logger.info('Retrying failed roles:', failedRoles.map(role => role.id));
       const retryTasks = failedRoles.map((role) => () => updateRole(role));
       await executeWithConcurrency(retryTasks, 10);
       Logger.info('Retry update completed. Final successful updates:', Array.from(updatedRoles));
@@ -137,10 +138,9 @@ export class RoleService {
           method: 'POST',
           body: JSON.stringify({ name }),
           headers: requestConfig.headers
-        });
-        const roleResponse: CreateRoleResponse = await response.json();
+        }) as CreateRoleResponse;
         
-        return roleResponse;
+        return response;
       } catch (error) {
         Logger.error(`Failed to create role ${name}: ${error}`);
         throw new Error(`Error creating role ${name}: ` + error);
@@ -164,7 +164,7 @@ export class RoleService {
   }
 
   public async saveSupersetRoles(roles: SupersetRole[]) {
-    const parsedRoles = await this.roleAdapter.toParsedRole(roles);
+    const parsedRoles = this.roleAdapter.toParsedRole(roles);
     await this.roleStore.saveRoles(parsedRoles);
   }
 
@@ -191,5 +191,67 @@ export class RoleService {
         .filter((role) => role.code === code)
         .map((role) => role.role);
     });
+  }
+
+  /**
+   * Fetches a Superset Role by name
+   * @param name - The name of the role to fetch
+   * @returns Promise<ParsedRole | null>
+   */
+  public async getRoleByName(name: string): Promise<ParsedRole | null> {
+    try {
+      const filters = {
+        filters: [{
+          col: "name",
+          opr: "eq",
+          value: name
+        }]
+      };
+      
+      const risonQuery = rison.encode(filters);
+      const response = await fetchWithAuth(
+        `${API_URL()}/api/v1/security/roles/?q=${risonQuery}`
+      ) as RoleList;
+
+      if (response.count !== 0 && response.result.length > 0) {
+        return this.roleAdapter.toParsedRole([response.result[0]])[0];
+      }
+      
+      return null;
+    } catch (error) {
+      Logger.error(`Error fetching role by name: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches multiple Superset Roles by their names
+   * @param names - Array of role names to fetch
+   * @returns Promise<ParsedRole[]>
+   */
+  public async getRolesByName(names: string[]): Promise<ParsedRole[]> {
+    try {
+      const filters = {
+        filters: [{
+          col: "name",
+          opr: "in",
+          value: names
+        }]
+      };
+      
+      const risonQuery = rison.encode(filters);
+      const response = await fetchWithAuth(
+        `${API_URL()}/api/v1/security/roles/?q=${risonQuery}`
+      ) as RoleList;
+
+      if (response.count !== 0 && response.result.length > 0) {
+        return this.roleAdapter.toParsedRole(response.result);
+      }
+      
+      return [];
+    } catch (error) {
+      Logger.error(`Error fetching roles by names: ${error}`);
+      throw error;
+    }
   }
 }

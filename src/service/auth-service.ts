@@ -76,7 +76,7 @@ export class AuthService {
       this.isRefreshing = true;
       Logger.info('Refreshing access token...');
 
-      const url = `${SUPERSET.baseURL}${SUPERSET.apiPath}/security/refresh`;
+      const url = `${API_URL()}/security/refresh`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -123,11 +123,10 @@ export class AuthService {
   }
 
   private readonly getCSRFToken = async (bearerToken: string): Promise<{ token: string; cookie: string }> => {
-    const response = await fetch(`${SUPERSET.baseURL}${SUPERSET.apiPath}/security/csrf_token/`, {
+    const response = await fetch(`${API_URL()}/security/csrf_token/`, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${bearerToken}`,
-        'X-Request-With': 'XMLHttpRequest'
+        Authorization: `Bearer ${bearerToken}`
       },
     });
 
