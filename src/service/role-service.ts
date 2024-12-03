@@ -132,18 +132,36 @@ export class RoleService {
         const url = `${API_URL()}/security/roles/`;
         const requestConfig = {
           headers: headers,
-        };  
+        };
 
         const response = await fetchWithAuth(url, {
           method: 'POST',
           body: JSON.stringify({ name }),
           headers: requestConfig.headers
         }) as CreateRoleResponse;
-        
+
         return response;
       } catch (error) {
-        Logger.error(`Failed to create role ${name}: ${error}`);
-        throw new Error(`Error creating role ${name}: ` + error);
+        // if error is due to duplicate role name: (status code 422), fetch it from Superset
+        if (error instanceof Error && error.message.includes('status: 422')) {
+          // handle duplicate role case
+          const existingRoles = await this.getRoleByName(name);
+          if (existingRoles.count === 1) {
+            return {
+              id: `${existingRoles.result[0].id}`,
+              result: {
+                name: existingRoles.result[0].name
+              },
+              name: existingRoles.result[0].name
+            };
+          } else {
+            Logger.error(`Failed to create role ${name}: ${error}`);
+            throw new Error(`Error creating role ${name}: ` + error);
+          }
+        } else {
+          Logger.error(`Failed to create role ${name}: ${error}`);
+          throw new Error(`Error creating role ${name}: ` + error);
+        }
       }
     };
 
@@ -185,7 +203,7 @@ export class RoleService {
     const codes = chuCodes.split(',').map((code) => code.trim());
 
     return codes.flatMap((code) => {
-     Logger.info(code);
+      Logger.info(code);
 
       return roles
         .filter((role) => role.code === code)
@@ -198,7 +216,7 @@ export class RoleService {
    * @param name - The name of the role to fetch
    * @returns Promise<ParsedRole | null>
    */
-  public async getRoleByName(name: string): Promise<ParsedRole | null> {
+  public async getRoleByName(name: string): Promise<RoleList> {
     try {
       const filters = {
         filters: [{
@@ -207,17 +225,13 @@ export class RoleService {
           value: name
         }]
       };
-      
+
       const risonQuery = rison.encode(filters);
       const response = await fetchWithAuth(
         `${API_URL()}/api/v1/security/roles/?q=${risonQuery}`
       ) as RoleList;
 
-      if (response.count !== 0 && response.result.length > 0) {
-        return this.roleAdapter.toParsedRole([response.result[0]])[0];
-      }
-      
-      return null;
+      return response;
     } catch (error) {
       Logger.error(`Error fetching role by name: ${error}`);
       throw error;
@@ -229,7 +243,7 @@ export class RoleService {
    * @param names - Array of role names to fetch
    * @returns Promise<ParsedRole[]>
    */
-  public async getRolesByName(names: string[]): Promise<ParsedRole[]> {
+  public async getRolesByName(names: string[]): Promise<RoleList> {
     try {
       const filters = {
         filters: [{
@@ -238,17 +252,13 @@ export class RoleService {
           value: names
         }]
       };
-      
+
       const risonQuery = rison.encode(filters);
       const response = await fetchWithAuth(
         `${API_URL()}/api/v1/security/roles/?q=${risonQuery}`
       ) as RoleList;
 
-      if (response.count !== 0 && response.result.length > 0) {
-        return this.roleAdapter.toParsedRole(response.result);
-      }
-      
-      return [];
+      return response;
     } catch (error) {
       Logger.error(`Error fetching roles by names: ${error}`);
       throw error;

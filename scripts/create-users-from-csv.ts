@@ -74,7 +74,7 @@ async function createUsers(users: CSVUser[]): Promise<CreateUserResponse[]> {
   }
 
   // Only process the first user as a sample
-  const sample = [users[0]];
+  const sample = [users[2]];
   Logger.info(`Creating ${sample.length} sample user`);
   
   const userPromises = sample.map(user => prepareUserData(user, roles));
@@ -196,19 +196,23 @@ async function generateCSV(users: CreateUserResponse[], filePath: string) {
     };
   });
 
+  Logger.info(`Generating CSV file at ${filePath} with ${csv.length} users`);
+
   // write csv to file
-  // Convert to CSV string
-  const csvString = csv.map(row => Object.values(row).join(',')).join('\n');
+  // Add headers and convert to CSV string
+  const headers = ['username', 'password', 'first name', 'last name', 'email'].join(',');
+  const csvRows = csv.map(row => Object.values(row).join(','));
+  const csvString = [headers, ...csvRows].join('\n');
   const fileName = getFileName(filePath);
 
-  // Write file using Node.js method
-  fs.writeFile(fileName, csvString, 'utf8', (err) => {
-    if (err) {
-      Logger.error(err);
-    } else {
-      Logger.success(`CSV file created successfully at ${fileName}`);
-    }
-  });
+  try {
+    // Write file synchronously to ensure it's written before continuing
+    fs.writeFileSync(fileName, csvString, 'utf8');
+    Logger.success(`CSV file created successfully at ${fileName}`);
+  } catch (err) {
+    Logger.error(`Failed to write CSV file: ${err}`);
+    throw err;
+  }
 }
 
 // putting it all together
@@ -219,7 +223,7 @@ async function createUsersFromCSV(filePath: string) {
     Logger.info(`Found ${users.length} users in CSV file`);
 
     const createdUsers = await createUsers(users);
-    Logger.info(`Successfully created ${createdUsers.length} users`);
+    Logger.info(`Created ${createdUsers.length} users`);
 
     if(createdUsers.length === 0) {
       throw new Error('No users created');

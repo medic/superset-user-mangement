@@ -324,11 +324,22 @@ export class RLSService {
    */
   async createRLSPolicy(policy: UpdateRLSRequest): Promise<UpdateRLSResponse> {
     const url = `${API_URL()}/rowlevelsecurity/`;
-    const response = await fetchWithAuth(url, {
-      method: 'POST',
-      body: JSON.stringify(policy)
-    });
-    return response as UpdateRLSResponse;
+    
+    try {
+      const response = await fetchWithAuth(url, {
+        method: 'POST',
+        body: JSON.stringify(policy)
+      });
+      return response as UpdateRLSResponse;
+    } catch (error) {
+      // If error is due to duplicate RLS policy (status code 422), ignore it
+      if (error instanceof Error && error.message.includes('status: 422')) {
+        Logger.info(`RLS policy already exists for ${policy.name}, skipping creation`);
+        return { id: 0, result: { name: policy.name } } as UpdateRLSResponse;
+      }
+      Logger.error(`Failed to create RLS policy ${policy.name}: ${error}`);
+      throw error;
+    }
   }
 
 }

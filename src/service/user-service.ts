@@ -9,24 +9,29 @@ import { API_URL, fetchWithAuth } from '../utils/request.utils';
 
 export class UserService {
 
-  constructor(private readonly authService: AuthService = AuthService.getInstance()) {}
+  constructor() {}
 
   public async createUserOnSuperset(users: User[]): Promise<CreateUserResponse[]> {
     const createdUsers: CreateUserResponse[] = [];
 
-    for (const user of users){
+    for (const user of users) {
       try {
-        const createdUser = await fetchWithAuth(`${API_URL()}/security/users/`, {
+        const response = await fetchWithAuth(`${API_URL()}/security/users/`, {
           method: 'POST',
           body: JSON.stringify(user)
         }) as CreateUserResponse;
 
-        Logger.success(`Created user: ${createdUser.result.username}`);
-
-        createdUsers.push(createdUser);
+        Logger.success(`Created user: ${JSON.stringify(response, null, 2)}`);
+        createdUsers.push({ result: user });
       } catch (error) {
-        // You might want to add error handling here
-        Logger.error(`Error creating user ${user.username}: ${error}`);
+        if (error instanceof Error && error.message.includes('status: 422')) {
+          Logger.info(`User ${user.username} already exists, skipping creation`);
+          createdUsers.push({ result: user });
+          continue;
+        } else {
+          Logger.error(`Failed to create user ${user.username}: ${error}`);
+          throw error;
+        }
       }
     }
 
