@@ -178,7 +178,7 @@ export class RLSService {
       
       const risonQuery = rison.encode(filters);
       const response = await fetchWithAuth(
-        `${API_URL()}/api/v1/rowlevelsecurity/?q=${risonQuery}`
+        `${API_URL()}/rowlevelsecurity/?q=${risonQuery}`
       ) as RLSList;
 
       if (response.count !== 0 && response.result.length > 0) {
@@ -209,7 +209,7 @@ export class RLSService {
       
       const risonQuery = rison.encode(filters);
       const response = await fetchWithAuth(
-        `${API_URL()}/api/v1/rowlevelsecurity/?q=${risonQuery}`
+        `${API_URL()}/rowlevelsecurity/?q=${risonQuery}`
       ) as RLSList;
 
       if (response.count !== 0 && response.result.length > 0) {

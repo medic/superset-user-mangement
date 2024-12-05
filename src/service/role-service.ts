@@ -228,7 +228,7 @@ export class RoleService {
 
       const risonQuery = rison.encode(filters);
       const response = await fetchWithAuth(
-        `${API_URL()}/api/v1/security/roles/?q=${risonQuery}`
+        `${API_URL()}/security/roles/?q=${risonQuery}`
       ) as RoleList;
 
       return response;
@@ -255,7 +255,7 @@ export class RoleService {
 
       const risonQuery = rison.encode(filters);
       const response = await fetchWithAuth(
-        `${API_URL()}/api/v1/security/roles/?q=${risonQuery}`
+        `${API_URL()}/security/roles/?q=${risonQuery}`
       ) as RoleList;
 
       return response;

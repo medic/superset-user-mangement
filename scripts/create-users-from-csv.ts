@@ -44,11 +44,11 @@ async function prepareUserData(csvUser: CSVUser, roles: ParsedRole[]): Promise<U
 
   return {
     active: true,
-    first_name: csvUser.first_name,
-    last_name: csvUser.last_name,
-    email: csvUser.email,
-    username: csvUser.username || generateUsername(csvUser.first_name, csvUser.last_name),
-    password: csvUser.password || generatePassword(10),
+    first_name: csvUser.first_name.trim(),
+    last_name: csvUser.last_name.trim(),
+    email: csvUser.email.trim(),
+    username: csvUser.username.trim() || generateUsername(csvUser.first_name, csvUser.last_name),
+    password: csvUser.password.trim() || generatePassword(10),
     roles: await getRoleIds(csvUser.chu, roles)
   };
 }
@@ -74,7 +74,7 @@ async function createUsers(users: CSVUser[]): Promise<CreateUserResponse[]> {
   }
 
   // Only process the first user as a sample
-  const sample = [users[2]];
+  const sample = users.slice(0, 3);
   Logger.info(`Creating ${sample.length} sample user`);
   
   const userPromises = sample.map(user => prepareUserData(user, roles));
@@ -145,7 +145,7 @@ async function createRLSPolicies(policies: Array<{ code: string, roleIds: number
     return {
       name: rlsName,
       group_key: baseRLSPolicy.group_key,
-      clause: 'chu_code=' + code,
+      clause: `chu_code=${code}`,
       description: 'RLS Policy for CHU ' + code,
       filter_type: baseRLSPolicy.filter_type,
       roles: roleIds,
@@ -171,7 +171,7 @@ async function updateRolesAndPolicies(supersetRoles: SupersetRole[], permissions
     return {
       name: `cha_${chuCode}`,
       group_key: baseRLSPolicy.group_key,
-      clause: 'chu_code=' + chuCode,
+      clause: `chu_code=${chuCode}`,
       description: 'RLS Policy for CHU ' + chuCode,
       filter_type: baseRLSPolicy.filter_type,
       roles: [role.id],
