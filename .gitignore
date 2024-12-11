@@ -5,3 +5,5 @@ logs
 /cht_usr/dist/
 .idea
 .DS_Store
+build
+data
