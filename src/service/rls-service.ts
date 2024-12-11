@@ -1,6 +1,5 @@
 import { AuthService } from "./auth-service";
 import {
-  RLSEntity,
   RLSList,
   RowLevelSecurity,
   UpdateRLSRequest,

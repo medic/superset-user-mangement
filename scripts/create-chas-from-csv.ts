@@ -44,13 +44,18 @@ async function prepareUserData(csvUser: CSVUser, roles: ParsedRole[]): Promise<U
 
   return {
     active: true,
-    first_name: csvUser.first_name.trim(),
-    last_name: csvUser.last_name.trim(),
+    first_name: capitalizeFirstLetter(csvUser.first_name.trim()),
+    last_name: capitalizeFirstLetter(csvUser.last_name.trim()),
     email: csvUser.email.trim(),
     username: csvUser.username.trim() || generateUsername(csvUser.first_name, csvUser.last_name),
-    password: csvUser.password.trim() || generatePassword(10),
+    password: csvUser.password.trim().replace(/^["']|["']$/g, '') || generatePassword(10),
     roles: await getRoleIds(csvUser.chu, roles)
   };
+}
+
+function capitalizeFirstLetter(str: string): string {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
 async function getRoleIds(chuCode: string, existingRoles: ParsedRole[]): Promise<number[]> {
@@ -72,19 +77,14 @@ async function createUsers(users: CSVUser[]): Promise<CreateUserResponse[]> {
   if (roles.length === 0) {
     throw new Error("No roles found");
   }
-
-  // Only process the first user as a sample
-  const sample = users.slice(0, 3);
-  Logger.info(`Creating ${sample.length} sample user`);
   
-  const userPromises = sample.map(user => prepareUserData(user, roles));
+  const userPromises = users.map(user => prepareUserData(user, roles));
   const preparedUsers = (await Promise.all(userPromises)).filter((user): user is User => user !== null);
 
   if (preparedUsers.length === 0) {
-    throw new Error("Sample user is invalid");
+    throw new Error("No valid users found");
   }
 
-  Logger.info(`Creating sample user: ${JSON.stringify(preparedUsers[0], null, 2)}`);
   return new UserService().createUserOnSuperset(preparedUsers);
 }
 
@@ -145,7 +145,7 @@ async function createRLSPolicies(policies: Array<{ code: string, roleIds: number
     return {
       name: rlsName,
       group_key: baseRLSPolicy.group_key,
-      clause: `chu_code=${code}`,
+      clause: `chu_code=\'${code}\'`,
       description: 'RLS Policy for CHU ' + code,
       filter_type: baseRLSPolicy.filter_type,
       roles: roleIds,
@@ -171,14 +171,14 @@ async function updateRolesAndPolicies(supersetRoles: SupersetRole[], permissions
     return {
       name: `cha_${chuCode}`,
       group_key: baseRLSPolicy.group_key,
-      clause: `chu_code=${chuCode}`,
+      clause: `chu_code=\'${chuCode}\'`,
       description: 'RLS Policy for CHU ' + chuCode,
       filter_type: baseRLSPolicy.filter_type,
       roles: [role.id],
       tables: baseRLSPolicy.tables.map(table => table.id)
     };
   });
-  Logger.info(`Creating ${rlsPolicies.length} RLS policies with request bodies: ${JSON.stringify(rlsPolicies, null, 2)}`);
+  Logger.info(`Creating RLS policies for roles: ${supersetRoles.map(role => role.name).join(', ')}`);
 
   await Promise.all(rlsPolicies.map(request => rlsService.createRLSPolicy(request)));
   Logger.info(`Created RLS policies for roles: ${supersetRoles.map(role => role.name).join(', ')}`);
@@ -243,7 +243,7 @@ const getFileName = (filePath: string) => {
 }
 
 // execute the script
-createUsersFromCSV(process.argv[2] || 'data/wundanyi.csv')
+createUsersFromCSV(process.argv[2])
   .catch((error) => {
     Logger.error('Script failed:', error);
   })

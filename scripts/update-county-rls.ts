@@ -17,7 +17,7 @@ async function updateCountyRLSPolicies() {
     // Step 2: Filter policies by county_name and exclude base RLS
     Logger.info("Filtering county RLS policies...");
     const countyPolicies = await rlsService.filterByGroupKey(allPolicies, 'county_name');
-    const policiesToUpdate = countyPolicies.filter(policy => policy.id !== rlsService.BASE_CHA_RLS_ID);
+    const policiesToUpdate = countyPolicies.filter(policy => policy.id !== rlsService.BASE_COUNTY_RLS_ID);
 
     Logger.info(`Processing RLS policies:
       - Total policies: ${allPolicies.length}
@@ -31,7 +31,7 @@ async function updateCountyRLSPolicies() {
 
     // Step 3: Fetch base tables and update county RLS policies
     Logger.info("Fetching base tables...");
-    const baseTables = await rlsService.fetchBaseTables();
+    const baseTables = await rlsService.fetchBaseCountyTables();
     Logger.info(`Found ${baseTables.length} base tables`);
 
     if (baseTables.length === 0) {

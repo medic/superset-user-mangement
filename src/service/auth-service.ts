@@ -3,6 +3,7 @@ import { SUPERSET } from '../config';
 import { Logger } from '../utils/logger';
 import { API_URL } from '../utils/request.utils';
 import fetch from 'node-fetch';
+import { RedisService } from '../repository/redis-util';
 
 /**
  * Class for handling authentication on Superset.
@@ -15,6 +16,10 @@ export class AuthService {
   private refreshToken: string | null = null;
   private isRefreshing = false;
   private refreshSubscribers: Array<(token: string) => void> = [];
+  private isLoggingIn = false;
+  private loginSubscribers: Array<(headers: any) => void> = [];
+  private readonly HEADERS_CACHE_KEY = 'superset:headers';
+  private readonly HEADERS_CACHE_TIMEOUT = 600; // 10 minutes in seconds
 
   private constructor() {}
 
@@ -26,35 +31,57 @@ export class AuthService {
   }
 
   public async login(): Promise<{ bearerToken: string; refreshToken: string }> {
-    const body: LoginRequest = {
-      username: SUPERSET.username,
-      password: SUPERSET.password,
-      provider: 'db',
-      refresh: true
-    };
-
-    Logger.info(`Login request: ${JSON.stringify(body)}`);
-
-    const url = `${API_URL()}/security/login`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Login failed: ${response.status} ${response.statusText}`);
+    if (this.isLoggingIn) {
+      // Return a promise that resolves when the login is complete
+      return new Promise((resolve) => {
+        this.loginSubscribers.push((headers) => {
+          resolve({ 
+            bearerToken: headers.Authorization.split(' ')[1],
+            refreshToken: this.refreshToken!
+          });
+        });
+      });
     }
 
-    const data = await response.json();
-    this.refreshToken = data.refresh_token;
+    try {
+      this.isLoggingIn = true;
+      const body: LoginRequest = {
+        username: SUPERSET.username,
+        password: SUPERSET.password,
+        provider: 'db',
+        refresh: true
+      };
 
-    return {
-      bearerToken: data.access_token,
-      refreshToken: data.refresh_token,
-    };
+      const url = `${API_URL()}/security/login`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Login failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      this.refreshToken = data.refresh_token;
+
+      // Update headers before notifying subscribers
+      await this.updateHeaders(data.access_token);
+
+      // Notify all subscribers about the successful login
+      this.loginSubscribers.forEach(callback => callback(this.headers));
+      this.loginSubscribers = [];
+
+      return {
+        bearerToken: data.access_token,
+        refreshToken: data.refresh_token,
+      };
+    } finally {
+      this.isLoggingIn = false;
+    }
   }
 
   /**
@@ -120,6 +147,12 @@ export class AuthService {
       csrf.token,
       csrf.cookie
     );
+
+    // Cache headers in Redis
+    const redisClient = await RedisService.getClient();
+    await redisClient.set(this.HEADERS_CACHE_KEY, JSON.stringify(this.headers), {
+      EX: this.HEADERS_CACHE_TIMEOUT
+    });
   }
 
   private readonly getCSRFToken = async (bearerToken: string): Promise<{ token: string; cookie: string }> => {
@@ -154,23 +187,36 @@ export class AuthService {
       Cookie: cookie,
   });
 
-  public async getHeaders() {
-    // Check if headers are already cached
-    if (this.headers) {
-      Logger.info('Using cached headers');
-      return this.headers;
-    }
-
+  public async getHeaders(): Promise<Record<string, string>> {
     try {
-      // Fetch new tokens
-      Logger.info('Fetching new headers');
+      // Try to get headers from Redis cache first
+      const redisClient = await RedisService.getClient();
+      const cachedHeaders = await redisClient.get(this.HEADERS_CACHE_KEY);
+      
+      if (cachedHeaders) {
+        this.headers = JSON.parse(cachedHeaders);
+        return this.headers;
+      }
+
+      // If no cached headers, fetch new ones
+      Logger.info('No cached headers found, fetching new ones');
       const { bearerToken } = await this.login();
       await this.updateHeaders(bearerToken);
-      Logger.success('Successfully fetched headers');
+      Logger.success('Successfully fetched and cached new headers');
       
       return this.headers;
     } catch (error) {
-      Logger.error(`Error during getHeaders:, ${error}`);
+      Logger.error(`Error during getHeaders: ${error}`);
+      
+      // If we get a 401 error, clear cache and retry login
+      if (error instanceof Error && error.message.includes('401')) {
+        Logger.info('Received 401, clearing cache and retrying login');
+        const redisClient = await RedisService.getClient();
+        await redisClient.del(this.HEADERS_CACHE_KEY);
+        this.headers = null;
+        return this.getHeaders();
+      }
+      
       throw error;
     }
   }
