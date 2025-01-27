@@ -4,18 +4,17 @@
 
 import fs from "fs";
 import csv from "csv-parser";
-import { CSVUser } from "../types/user";
 
-export async function readUsersFromFile(fileName: string): Promise<CSVUser[]> {
+export async function readUsersFromFile<T>(fileName: string): Promise<T[]> {
   return new Promise((resolve, reject) => {
-    const csvUsers: CSVUser[] = [];
+    const csvUsers: T[] = [];
 
     fs.createReadStream(fileName)
       .on('error', (error) => {
         reject(new Error(`File not found: ${error.message}`));
       })
       .pipe(csv())
-      .on('data', (data: CSVUser) => {
+      .on('data', (data: T) => {
         csvUsers.push(data);
       })
       .on('error', (error: Error) => {

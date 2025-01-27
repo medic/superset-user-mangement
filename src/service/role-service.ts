@@ -147,6 +147,7 @@ export class RoleService {
           // handle duplicate role case
           const existingRoles = await this.getRoleByName(name);
           if (existingRoles.count === 1) {
+            Logger.info(`Role already exists. Id is ${existingRoles.result[0].id}`);
             return {
               id: `${existingRoles.result[0].id}`,
               result: {

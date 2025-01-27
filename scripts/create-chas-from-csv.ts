@@ -219,7 +219,7 @@ async function generateCSV(users: CreateUserResponse[], filePath: string) {
 async function createUsersFromCSV(filePath: string) {
   try {
     Logger.info(`Starting user creation process from CSV: ${filePath}`);
-    const users = await readUsersFromFile(filePath);
+    const users = await readUsersFromFile<CSVUser>(filePath);
     Logger.info(`Found ${users.length} users in CSV file`);
 
     const createdUsers = await createUsers(users);
