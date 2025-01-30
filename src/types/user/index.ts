@@ -12,7 +12,7 @@ export interface User {
   roles: number[];
 }
 
-export interface CSVUser {
+export interface CHAUser {
   first_name: string;
   last_name: string;
   username: string;
@@ -23,7 +23,6 @@ export interface CSVUser {
   county: string;
   facility: string;
 }
-
 
 export interface CreateUserResponse {
   result: User

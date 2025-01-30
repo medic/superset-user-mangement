@@ -1,6 +1,6 @@
 import { RoleService } from "../src/service/role-service";
 import { UserService } from "../src/service/user-service";
-import { CreateUserResponse, CSVUser, User } from "../src/types/user";
+import { CreateUserResponse, CHAUser, User } from "../src/types/user";
 import { RLSService } from "../src/service/rls-service";
 import { generatePassword } from "../src/utils/password.utils";
 import { generateUsername } from "../src/utils/string.utils";
@@ -17,7 +17,7 @@ import { RedisService } from "../src/repository/redis-util";
 const roleService = new RoleService();
 
 // Validation functions
-function validateCSVUser(user: CSVUser): string[] {
+function validateUserDetails(user: CHAUser): string[] {
   const errors: string[] = [];
 
   if (!user.first_name?.trim()) errors.push("First name is required");
@@ -35,8 +35,8 @@ function validateCSVUser(user: CSVUser): string[] {
 }
 
 // create users
-async function prepareUserData(csvUser: CSVUser, roles: ParsedRole[]): Promise<User | null> {
-  const errors = validateCSVUser(csvUser);
+async function prepareUserData(csvUser: CHAUser, roles: ParsedRole[]): Promise<User | null> {
+  const errors = validateUserDetails(csvUser);
   if (errors.length > 0) {
     Logger.error(`User ${csvUser.username} is invalid: ${errors.join(", ")}`);
     return null;
@@ -72,7 +72,7 @@ async function getRoleIds(chuCode: string, existingRoles: ParsedRole[]): Promise
   return supersetRoles.map(role => role.id);
 }
 
-async function createUsers(users: CSVUser[]): Promise<CreateUserResponse[]> {
+async function createUsers(users: CHAUser[]): Promise<CreateUserResponse[]> {
   const roles = await roleService.getRoles();
   if (roles.length === 0) {
     throw new Error("No roles found");
@@ -219,7 +219,7 @@ async function generateCSV(users: CreateUserResponse[], filePath: string) {
 async function createUsersFromCSV(filePath: string) {
   try {
     Logger.info(`Starting user creation process from CSV: ${filePath}`);
-    const users = await readUsersFromFile<CSVUser>(filePath);
+    const users = await readUsersFromFile<CHAUser>(filePath);
     Logger.info(`Found ${users.length} users in CSV file`);
 
     const createdUsers = await createUsers(users);

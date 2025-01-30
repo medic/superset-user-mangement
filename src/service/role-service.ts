@@ -5,7 +5,7 @@ import { PermissionIds } from "../types/permission";
 import { AuthService } from "./auth-service";
 import { RoleRepository } from "../repository/role-repository";
 import { RoleAdapter } from "../repository/role-adapter";
-import { CSVUser } from "../types/user";
+import { CHAUser } from "../types/user";
 import { API_URL, executeWithConcurrency, retryOperation, fetchWithAuth } from "../utils/request.utils";
 import { Logger } from "../utils/logger";
 
@@ -191,7 +191,7 @@ export class RoleService {
     return await this.roleStore.fetchRoles();
   }
 
-  public async matchRolesToUsers(users: CSVUser[], roles: ParsedRole[]) {
+  public async matchRolesToUsers(users: CHAUser[], roles: ParsedRole[]) {
     users.forEach((user) => {
       const res = this.matchRoles(user.chu, roles);
       Logger.info(`Found ${res.length} roles for ${user.username}}`);
