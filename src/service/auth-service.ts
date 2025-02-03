@@ -199,10 +199,8 @@ export class AuthService {
       }
 
       // If no cached headers, fetch new ones
-      Logger.info('No cached headers found, fetching new ones');
       const { bearerToken } = await this.login();
       await this.updateHeaders(bearerToken);
-      Logger.success('Successfully fetched and cached new headers');
       
       return this.headers;
     } catch (error) {
@@ -210,7 +208,7 @@ export class AuthService {
       
       // If we get a 401 error, clear cache and retry login
       if (error instanceof Error && error.message.includes('401')) {
-        Logger.info('Received 401, clearing cache and retrying login');
+        Logger.info('Unauthorized, clearing cache and retrying login');
         const redisClient = await RedisService.getClient();
         await redisClient.del(this.HEADERS_CACHE_KEY);
         this.headers = null;

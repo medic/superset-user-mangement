@@ -1,25 +1,28 @@
 /**
- * Generates a username from first and last name in the format firstName_lastName
+ * Generates a username from first and last name in the format firstWord_lastWord
  * Removes any numeric characters and special characters
  * @param firstName First name
  * @param lastName Last name
- * @returns Generated username in format firstname_lastname
+ * @returns Generated username in format firstword_lastword of the full name
  */
 export function generateUsername(firstName: string, lastName: string): string {
-  // Function to clean a name part
-  const cleanNamePart = (name: string): string => {
-    return name.toLowerCase()
+  // Function to clean text and split into words
+  const cleanText = (text: string): string[] => {
+    return text.toLowerCase()
       .normalize('NFD')  // Decompose accented characters
       .replace(/[\u0300-\u036f]/g, '')  // Remove diacritics
       .replace(/[^a-z\s]/g, '')  // Remove everything except letters and spaces
       .trim()  // Remove leading/trailing spaces
-      .split(/\s+/)[0];  // Take only the first word
+      .split(/\s+/);  // Split into words
   };
 
-  // Get first word of each name and clean them
-  const firstPart = cleanNamePart(firstName);
-  const lastPart = cleanNamePart(lastName);
-  
-  // Create username by combining first name and last name with underscore
-  return `${firstPart}_${lastPart}`;
+  // Combine and clean both names
+  const allWords = [...cleanText(firstName), ...cleanText(lastName)];
+
+  // Get first and last words
+  const firstWord = allWords[0];
+  const lastWord = allWords[allWords.length - 1];
+
+  // Create username by combining first and last words with underscore
+  return `${firstWord}_${lastWord}`;
 }

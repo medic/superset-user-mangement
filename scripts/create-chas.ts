@@ -27,9 +27,9 @@ function validateUserDetails(user: CHAUser): string[] {
   if (!user.chu?.trim()) errors.push("CHU code is required");
 
   // If username is provided, validate it
-  if (user.username && !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(user.username)) {
-    errors.push("Username must start with a letter and contain only letters, numbers, and underscores");
-  }
+  // if (user.username && !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(user.username)) {
+  //   errors.push("Username must start with a letter and contain only letters, numbers, and underscores");
+  // }
 
   return errors;
 }
@@ -47,7 +47,7 @@ async function prepareUserData(csvUser: CHAUser, roles: ParsedRole[]): Promise<U
     first_name: capitalizeFirstLetter(csvUser.first_name.trim()),
     last_name: capitalizeFirstLetter(csvUser.last_name.trim()),
     email: csvUser.email.trim(),
-    username: csvUser.username.trim() || generateUsername(csvUser.first_name, csvUser.last_name),
+    username: generateUsername(csvUser.first_name, csvUser.last_name),
     password: csvUser.password.trim().replace(/^["']|["']$/g, '') || generatePassword(10),
     roles: await getRoleIds(csvUser.chu, roles)
   };
@@ -222,7 +222,11 @@ async function createUsersFromCSV(filePath: string) {
     const users = await readUsersFromFile<CHAUser>(filePath);
     Logger.info(`Found ${users.length} users in CSV file`);
 
-    const createdUsers = await createUsers(users);
+    // take one user and create it
+    const user = users.slice(0, 1)[0];
+    Logger.info(`Creating user ${user.username}`);
+
+    const createdUsers = await createUsers([user]);
     Logger.info(`Created ${createdUsers.length} users`);
 
     if(createdUsers.length === 0) {

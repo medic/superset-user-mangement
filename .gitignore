@@ -7,3 +7,4 @@ logs
 .DS_Store
 build
 data
+scripts/updates.txt

@@ -2,7 +2,6 @@
  * Class for handling creation of user accounts on Superset
  */
 
-import { AuthService } from "./auth-service";
 import { CreateUserResponse, User } from "../types/user";
 import { Logger } from "../utils/logger";
 import { API_URL, fetchWithAuth } from '../utils/request.utils';
