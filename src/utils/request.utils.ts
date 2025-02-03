@@ -42,7 +42,7 @@ async function handleResponse(response: Response) {
   return response.json();
 }
 
-export async function fetchWithAuth(url: string, options: RequestInit = {}) {
+export async function handleRequest(url: string, options: RequestInit = {}) {
   try {
     const headers = await AuthService.getInstance().getHeaders();
     const response = await fetch(url, {

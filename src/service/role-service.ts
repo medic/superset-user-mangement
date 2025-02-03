@@ -6,7 +6,7 @@ import { AuthService } from "./auth-service";
 import { RoleRepository } from "../repository/role-repository";
 import { RoleAdapter } from "../repository/role-adapter";
 import { CHAUser } from "../types/user";
-import { API_URL, executeWithConcurrency, retryOperation, fetchWithAuth } from "../utils/request.utils";
+import { API_URL, executeWithConcurrency, retryOperation, handleRequest } from "../utils/request.utils";
 import { Logger } from "../utils/logger";
 
 /**
@@ -52,7 +52,7 @@ export class RoleService {
     while (true) {
       const queryParams = rison.encode({ page: currentPage, page_size: 100 });
       try {
-        const roleList = await fetchWithAuth(`${API_URL()}/security/roles?q=${queryParams}`) as RoleList;
+        const roleList = await handleRequest(`${API_URL()}/security/roles?q=${queryParams}`) as RoleList;
         roles = roles.concat(roleList.result);
 
         Logger.info(`Fetched ${roleList.result.length} roles from page ${currentPage}`);
@@ -134,7 +134,7 @@ export class RoleService {
           headers: headers,
         };
 
-        const response = await fetchWithAuth(url, {
+        const response = await handleRequest(url, {
           method: 'POST',
           body: JSON.stringify({ name }),
           headers: requestConfig.headers
@@ -232,7 +232,7 @@ export class RoleService {
       };
 
       const risonQuery = rison.encode(filters);
-      const response = await fetchWithAuth(
+      const response = await handleRequest(
         `${API_URL()}/security/roles/?q=${risonQuery}`
       ) as RoleList;
 
@@ -259,7 +259,7 @@ export class RoleService {
       };
 
       const risonQuery = rison.encode(filters);
-      const response = await fetchWithAuth(
+      const response = await handleRequest(
         `${API_URL()}/security/roles/?q=${risonQuery}`
       ) as RoleList;
 
