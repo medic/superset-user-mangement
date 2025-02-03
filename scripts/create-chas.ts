@@ -59,17 +59,45 @@ function capitalizeFirstLetter(str: string): string {
 }
 
 async function getRoleIds(chuCode: string, existingRoles: ParsedRole[]): Promise<number[]> {
-  const supersetRoles = roleService.matchRoles(chuCode, existingRoles);
-  const permissions = await getChaPermissions();
+  try {
+    const chuCodes = roleService.getChuCodes(chuCode);
+    Logger.info(`Processing roles for CHU codes: ${chuCodes.join(', ')}`);
 
-  if (supersetRoles.length === 0) {
-    Logger.info('Found no existing roles, creating new roles');
-    return createRoles(chuCode, permissions);
+    const supersetRoles = roleService.matchRoles(chuCode, existingRoles);
+    Logger.info(`Found ${supersetRoles.length} existing roles out of ${chuCodes.length} required roles`);
+
+    const permissions = await getChaPermissions();
+    const roleIds: number[] = [];
+
+    // Case 1: No existing roles found
+    if (supersetRoles.length === 0) {
+      Logger.info('Creating all roles as none exist');
+      const newRoleIds = await createRoles(chuCode, permissions);
+      return newRoleIds;
+    }
+
+    // Case 2: Some roles missing
+    if (supersetRoles.length !== chuCodes.length) {
+      const missingChuCodes = chuCodes.filter(code => 
+        !supersetRoles.some(role => role.name.startsWith(code))
+      );
+
+      Logger.info(`Creating ${missingChuCodes.length} missing roles for CHU codes: ${missingChuCodes.join(', ')}`);
+      const newRoleIds = await createRoles(missingChuCodes.join(','), permissions);
+      roleIds.push(...newRoleIds);
+    }
+
+    // Case 3: Update existing roles
+    Logger.info(`Updating permissions for ${supersetRoles.length} existing roles`);
+    await updateRolesAndPolicies(supersetRoles, permissions);
+    roleIds.push(...supersetRoles.map(role => role.id));
+
+    Logger.info(`Successfully processed ${roleIds.length} total roles`);
+    return roleIds;
+  } catch (error) {
+    Logger.error('Failed to process roles');
+    throw error;
   }
-
-  Logger.info('Found existing roles, updating permissions');
-  await updateRolesAndPolicies(supersetRoles, permissions);
-  return supersetRoles.map(role => role.id);
 }
 
 async function createUsers(users: CHAUser[]): Promise<CreateUserResponse[]> {

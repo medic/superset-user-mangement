@@ -198,10 +198,14 @@ export class RoleService {
     });
   }
 
+  public getChuCodes(chuCodes: string): string[] {
+    return chuCodes.split(',').map((code) => code.trim());
+  }
+
   public matchRoles(chuCodes: string, roles: ParsedRole[]): SupersetRole[] {
     Logger.info(`${roles.length} roles available`);
 
-    const codes = chuCodes.split(',').map((code) => code.trim());
+    const codes = this.getChuCodes(chuCodes);
 
     return codes.flatMap((code) => {
       Logger.info(code);
