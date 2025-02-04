@@ -251,10 +251,10 @@ async function createUsersFromCSV(filePath: string) {
     Logger.info(`Found ${users.length} users in CSV file`);
 
     // take one user and create it
-    const user = users.slice(0, 1)[0];
-    Logger.info(`Creating user ${user.username}`);
+    // const user = users.slice(1, 2)[0];
+    // Logger.info(`Creating user ${user.username}`);
 
-    const createdUsers = await createUsers([user]);
+    const createdUsers = await createUsers(users);
     Logger.info(`Created ${createdUsers.length} users`);
 
     if(createdUsers.length === 0) {

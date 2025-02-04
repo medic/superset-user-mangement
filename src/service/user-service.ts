@@ -22,7 +22,7 @@ export class UserService {
         }) as CreateUserResponse;
 
         Logger.success(`Created user: ${JSON.stringify(response, null, 2)}`);
-        createdUsers.push(response);
+        createdUsers.push({result: user});
       } catch (error) {
         if (error instanceof Error && error.message.includes('status: 422')) {
           Logger.info(`User ${user.username} already exists, updating roles instead`);
