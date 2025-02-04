@@ -2,7 +2,7 @@ import { PermissionList, PermissionIds, UpdatePermissionResult, Permission } fro
 import { AuthService } from './auth-service';
 import { RedisService } from '../repository/redis-util';
 import { Logger } from '../utils/logger';
-import { API_URL, fetchWithAuth } from '../utils/request.utils';
+import { API_URL, handleRequest } from '../utils/request.utils';
 
 /**
  * Class to manage permissions for roles on Superset
@@ -23,7 +23,7 @@ export class PermissionService {
     Logger.info(`Fetching permissions for role ${roleId}`);
 
     try {
-      const permissionList = await fetchWithAuth(
+      const permissionList = await handleRequest(
         `${API_URL()}/security/roles/${roleId}/permissions/`
       ) as PermissionList;
 
@@ -45,7 +45,7 @@ export class PermissionService {
     menuIds: PermissionIds,
   ) {
     try {
-      const response = await fetchWithAuth(
+      const response = await handleRequest(
         `${API_URL()}/security/roles/${roleId}/permissions`, 
         {
           method: 'POST',

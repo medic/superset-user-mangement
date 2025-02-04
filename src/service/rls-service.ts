@@ -7,7 +7,7 @@ import {
   UpdateResult,
 } from "../types/rls";
 import { Logger } from '../utils/logger';
-import { API_URL, fetchWithAuth } from '../utils/request.utils';
+import { API_URL, handleRequest } from '../utils/request.utils';
 import rison from "rison";
 import { RlsRepository } from "../repository/rls-repository";
 
@@ -54,7 +54,7 @@ export class RLSService {
         const queryParams = rison.encode({ page: currentPage, page_size: 100 });
        
         const url = `${API_URL()}/rowlevelsecurity/?q=${queryParams}`;
-        const response = await fetchWithAuth(url, {
+        const response = await handleRequest(url, {
           method: 'GET',
         });
 
@@ -144,7 +144,7 @@ export class RLSService {
    */
   async fetchRLSById(rlsId: number): Promise<RowLevelSecurity> {
     const url = `${API_URL()}/rowlevelsecurity/${rlsId}`;
-    const response = await fetchWithAuth(url, {
+    const response = await handleRequest(url, {
       method: 'GET',
     });
 
@@ -176,7 +176,7 @@ export class RLSService {
       };
       
       const risonQuery = rison.encode(filters);
-      const response = await fetchWithAuth(
+      const response = await handleRequest(
         `${API_URL()}/rowlevelsecurity/?q=${risonQuery}`
       ) as RLSList;
 
@@ -207,7 +207,7 @@ export class RLSService {
       };
       
       const risonQuery = rison.encode(filters);
-      const response = await fetchWithAuth(
+      const response = await handleRequest(
         `${API_URL()}/rowlevelsecurity/?q=${risonQuery}`
       ) as RLSList;
 
@@ -259,7 +259,7 @@ export class RLSService {
 
               // Update the RLS policy
               const url = `${API_URL()}/rowlevelsecurity/${policy.id}`;
-              const response = await fetchWithAuth(url, {
+              const response = await handleRequest(url, {
                 method: 'PUT',
                 body: JSON.stringify(updateRequest)
               }) as UpdateResult;
@@ -325,7 +325,7 @@ export class RLSService {
     const url = `${API_URL()}/rowlevelsecurity/`;
     
     try {
-      const response = await fetchWithAuth(url, {
+      const response = await handleRequest(url, {
         method: 'POST',
         body: JSON.stringify(policy)
       });

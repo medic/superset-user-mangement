@@ -26,11 +26,6 @@ function validateUserDetails(user: CHAUser): string[] {
   if (user.email && !user.email.includes("@")) errors.push("Invalid email format");
   if (!user.chu?.trim()) errors.push("CHU code is required");
 
-  // If username is provided, validate it
-  if (user.username && !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(user.username)) {
-    errors.push("Username must start with a letter and contain only letters, numbers, and underscores");
-  }
-
   return errors;
 }
 
@@ -47,7 +42,7 @@ async function prepareUserData(csvUser: CHAUser, roles: ParsedRole[]): Promise<U
     first_name: capitalizeFirstLetter(csvUser.first_name.trim()),
     last_name: capitalizeFirstLetter(csvUser.last_name.trim()),
     email: csvUser.email.trim(),
-    username: csvUser.username.trim() || generateUsername(csvUser.first_name, csvUser.last_name),
+    username: generateUsername(csvUser.first_name, csvUser.last_name),
     password: csvUser.password.trim().replace(/^["']|["']$/g, '') || generatePassword(10),
     roles: await getRoleIds(csvUser.chu, roles)
   };
@@ -59,17 +54,45 @@ function capitalizeFirstLetter(str: string): string {
 }
 
 async function getRoleIds(chuCode: string, existingRoles: ParsedRole[]): Promise<number[]> {
-  const supersetRoles = roleService.matchRoles(chuCode, existingRoles);
-  const permissions = await getChaPermissions();
+  try {
+    const chuCodes = roleService.getChuCodes(chuCode);
+    Logger.info(`Processing roles for CHU codes: ${chuCodes.join(', ')}`);
 
-  if (supersetRoles.length === 0) {
-    Logger.info('Found no existing roles, creating new roles');
-    return createRoles(chuCode, permissions);
+    const supersetRoles = roleService.matchRoles(chuCode, existingRoles);
+    Logger.info(`Found ${supersetRoles.length} existing roles out of ${chuCodes.length} required roles`);
+
+    const permissions = await getChaPermissions();
+    const roleIds: number[] = [];
+
+    // Case 1: No existing roles found
+    if (supersetRoles.length === 0) {
+      Logger.info('Creating all roles as none exist');
+      const newRoleIds = await createRoles(chuCode, permissions);
+      return newRoleIds;
+    }
+
+    // Case 2: Some roles missing
+    if (supersetRoles.length !== chuCodes.length) {
+      const missingChuCodes = chuCodes.filter(code => 
+        !supersetRoles.some(role => role.name.startsWith(code))
+      );
+
+      Logger.info(`Creating ${missingChuCodes.length} missing roles for CHU codes: ${missingChuCodes.join(', ')}`);
+      const newRoleIds = await createRoles(missingChuCodes.join(','), permissions);
+      roleIds.push(...newRoleIds);
+    }
+
+    // Case 3: Update existing roles
+    Logger.info(`Updating permissions for ${supersetRoles.length} existing roles`);
+    await updateRolesAndPolicies(supersetRoles, permissions);
+    roleIds.push(...supersetRoles.map(role => role.id));
+
+    Logger.info(`Successfully processed ${roleIds.length} total roles`);
+    return roleIds;
+  } catch (error) {
+    Logger.error('Failed to process roles');
+    throw error;
   }
-
-  Logger.info('Found existing roles, updating permissions');
-  await updateRolesAndPolicies(supersetRoles, permissions);
-  return supersetRoles.map(role => role.id);
 }
 
 async function createUsers(users: CHAUser[]): Promise<CreateUserResponse[]> {
@@ -218,7 +241,6 @@ async function generateCSV(users: CreateUserResponse[], filePath: string) {
 // putting it all together
 async function createUsersFromCSV(filePath: string) {
   try {
-    Logger.info(`Starting user creation process from CSV: ${filePath}`);
     const users = await readUsersFromFile<CHAUser>(filePath);
     Logger.info(`Found ${users.length} users in CSV file`);
 
