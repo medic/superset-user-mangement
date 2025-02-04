@@ -132,9 +132,9 @@ export class RLSService {
   }
 
   /**
-   * Fetch base CHU RLS policy tables
+   * Fetch supervisor tables. Alls CHAs and subcounty users need access to these tables
    */
-  async fetchBaseCHUTables(): Promise<number[]> {
+  async fetchSupervisorTables(): Promise<number[]> {
     return this.fetchRLSTables(this.BASE_CHU_RLS_ID);
   }
 

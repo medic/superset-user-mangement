@@ -1,3 +1,4 @@
+import path from 'path';
 import { Logger } from '../src/utils/logger';
 import { generatePassword } from '../src/utils/password.utils';
 import { PermissionService } from '../src/service/permission-service';
@@ -8,7 +9,7 @@ import { UpdateRLSRequest } from '../src/types/rls';
 import { User } from '../src/types/user';
 import { UserService } from '../src/service/user-service';
 
-const CSV_FILENAME = './subcounty-users.csv';
+const CSV_FILENAME = path.join(__dirname, '../data/subcounty-users.csv');
 
 const BASE_SUBCOUNTY_ROLE_ID = 3585;
 
@@ -62,14 +63,17 @@ async function createRLSPolicy(subcountyRequest: SubcountyAccountRequest, roleId
   Logger.info('Creating an RLS...');
   const rlsService = new RLSService();
   const clause = getRLSClause(subcountyRequest);
+
+  const supervisorTables = await rlsService.fetchSupervisorTables();
+
   const rlsRequest: UpdateRLSRequest = {
     name: `subcounty_${subcountyUsername(subcountyRequest)}`,
     group_key: '',
     clause,
-    description: `RLS Policy for Subcounty ${subcountyRequest.county}.${subcountyRequest.subcounty}`,
+    description: `RLS Policy for Subcounty ${subcountyRequest.county}.${subcountyRequest.subcounty || ''}`,
     filter_type: 'Regular',
     roles: [roleId],
-    tables: [241],
+    tables: [241, ...supervisorTables],
   };
 
   const rlsResponse = await rlsService.createRLSPolicy(rlsRequest);
@@ -113,7 +117,7 @@ function validateAccountRequests(subcountyAccountRequests: SubcountyAccountReque
   const subcountyRequests = await readUsersFromFile<SubcountyAccountRequest>(CSV_FILENAME);
 
   validateAccountRequests(subcountyRequests);
-
+  
   const userResults: UserCreationResult[] = [];
   for (const subcountyRequest of subcountyRequests) {
     Logger.info(`Creating ${subcountyUsername(subcountyRequest)}:`);
