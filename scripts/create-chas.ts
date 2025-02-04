@@ -26,11 +26,6 @@ function validateUserDetails(user: CHAUser): string[] {
   if (user.email && !user.email.includes("@")) errors.push("Invalid email format");
   if (!user.chu?.trim()) errors.push("CHU code is required");
 
-  // If username is provided, validate it
-  // if (user.username && !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(user.username)) {
-  //   errors.push("Username must start with a letter and contain only letters, numbers, and underscores");
-  // }
-
   return errors;
 }
 
@@ -246,13 +241,8 @@ async function generateCSV(users: CreateUserResponse[], filePath: string) {
 // putting it all together
 async function createUsersFromCSV(filePath: string) {
   try {
-    Logger.info(`Starting user creation process from CSV: ${filePath}`);
     const users = await readUsersFromFile<CHAUser>(filePath);
     Logger.info(`Found ${users.length} users in CSV file`);
-
-    // take one user and create it
-    // const user = users.slice(1, 2)[0];
-    // Logger.info(`Creating user ${user.username}`);
 
     const createdUsers = await createUsers(users);
     Logger.info(`Created ${createdUsers.length} users`);
