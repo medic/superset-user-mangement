@@ -1,5 +1,4 @@
 import { RLSService } from "../src/service/rls-service";
-import { AuthService } from "../src/service/auth-service";
 import { Logger } from "../src/utils/logger";
 
 async function updateCountyRLSPolicies() {

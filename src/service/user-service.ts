@@ -26,6 +26,7 @@ export class UserService {
       } catch (error) {
         if (error instanceof Error && error.message.includes('status: 422')) {
           Logger.info(`User ${user.username} already exists, updating roles instead`);
+          Logger.error(`Failed to create user ${user.username}: ${error}`);
 
           const existingUser = await this.getUserByEmail(user.email);
           Logger.info(`Fetched ${JSON.stringify(existingUser, null, 2)} from Superset`);
@@ -65,6 +66,9 @@ export class UserService {
       const risonQuery = rison.encode(filters);
 
       const response = await handleRequest(`${API_URL()}/security/users/?q=${risonQuery}`);
+      if (!response.result || response.result.length === 0) {
+        throw new Error(`No user found with email ${email}`);
+      }
       return response.result[0] as SupersetUser;
     } catch (error) {
       Logger.error(`Failed to get user by email ${email}: ${error}`);

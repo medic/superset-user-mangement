@@ -199,7 +199,7 @@ export class RoleService {
   }
 
   public getChuCodes(chuCodes: string): string[] {
-    return chuCodes.split(',').map((code) => code.trim());
+    return [...new Set(chuCodes.split(',').map(code => code.trim()))];
   }
 
   public matchRoles(chuCodes: string, roles: ParsedRole[]): SupersetRole[] {
@@ -266,6 +266,22 @@ export class RoleService {
       return response;
     } catch (error) {
       Logger.error(`Error fetching roles by names: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch Superset Role By id
+   * @param id - The id of the role to fetch
+   * @returns Promise<SupersetRole | null>
+   */
+  public async getRoleById(id: number): Promise<SupersetRole> {
+    try {
+      const url = `${API_URL()}/security/roles/${id}`;
+      const response = await handleRequest(url);
+      return response.result as SupersetRole;
+    } catch (error) {
+      Logger.error(`Error fetching role by id ${id}: ${error}`);
       throw error;
     }
   }

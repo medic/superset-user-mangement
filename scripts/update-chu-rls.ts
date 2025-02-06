@@ -40,7 +40,7 @@ async function updateCHURLSPolicies() {
 
     // Step 3: Fetch base CHU tables
     Logger.info("Fetching base CHU tables...");
-    const baseTables = await rlsService.fetchBaseCHUTables();
+    const baseTables = await rlsService.fetchSupervisorTables();
     Logger.info(`Found ${baseTables.length} base CHU tables`);
 
     if (baseTables.length === 0) {
