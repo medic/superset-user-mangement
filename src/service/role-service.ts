@@ -199,7 +199,7 @@ export class RoleService {
   }
 
   public getChuCodes(chuCodes: string): string[] {
-    return chuCodes.split(',').map((code) => code.trim());
+    return [...new Set(chuCodes.split(',').map(code => code.trim()))];
   }
 
   public matchRoles(chuCodes: string, roles: ParsedRole[]): SupersetRole[] {
