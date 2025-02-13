@@ -10,7 +10,7 @@ import { User } from '../src/types/user';
 import { UserService } from '../src/service/user-service';
 import fs from 'fs';
 
-const CSV_FILENAME = path.join(__dirname, '../data/samburu-subcounty.csv');
+const CSV_FILENAME = path.join(__dirname, '../data/subcounty-users.csv');
 
 const BASE_SUBCOUNTY_ROLE_ID = 3585;
 
@@ -152,7 +152,7 @@ function generateCSV(userResults: UserCreationResult[], filePath: string) {
   const subcountyRequests = await readUsersFromFile<SubcountyAccountRequest>(CSV_FILENAME);
 
   validateAccountRequests(subcountyRequests);
-
+  
   const userResults: UserCreationResult[] = [];
   for (const subcountyRequest of subcountyRequests) {
     Logger.info(`Creating ${subcountyUsername(subcountyRequest)}:`);
