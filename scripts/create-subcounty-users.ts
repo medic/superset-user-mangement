@@ -8,6 +8,7 @@ import { RLSService } from '../src/service/rls-service';
 import { UpdateRLSRequest } from '../src/types/rls';
 import { User } from '../src/types/user';
 import { UserService } from '../src/service/user-service';
+import fs from 'fs';
 
 const CSV_FILENAME = path.join(__dirname, '../data/subcounty-users.csv');
 
@@ -32,12 +33,18 @@ async function getBasePermissions(): Promise<number[]> {
 
 function subcountyUsername(request: SubcountyAccountRequest): string {
   const transform = (val: string) => val.toLowerCase().replace(/ /g, '_').trim();
-  let result = `${transform(request.county)}`;
-  if (request.subcounty) {
-    result += `_${transform(request.subcounty)}`;
+
+  const subcountyName = request.subcounty?.split(' ');
+
+  if (!subcountyName || subcountyName.length > 1) {
+    return transform(request.subcounty!)
+  } else {
+    let result = `${transform(request.county)}`;
+    if (request.subcounty) {
+      result += `_${transform(request.subcounty)}`;
+    }
+    return result;
   }
-  
-  return result;
 }
 
 async function createRole(subcountyRequest: SubcountyAccountRequest): Promise<number> {
@@ -81,10 +88,12 @@ async function createRLSPolicy(subcountyRequest: SubcountyAccountRequest, roleId
 }
 
 async function createUser(subcountyRequest: SubcountyAccountRequest, roleId: number): Promise<UserCreationResult> {
+  const subcountyName = subcountyRequest.subcounty?.split(' ');
+
   const user: User = {
     active: true,
-    first_name: subcountyRequest.subcounty || '',
-    last_name: subcountyRequest.county,
+    first_name: subcountyName?.[0] || subcountyRequest.subcounty || '',
+    last_name: subcountyName?.[1] || subcountyRequest.county,
     email: subcountyRequest.email,
     username: subcountyUsername(subcountyRequest),
     password: generatePassword(10),
@@ -94,9 +103,9 @@ async function createUser(subcountyRequest: SubcountyAccountRequest, roleId: num
   const userService = new UserService();
   const userResponses = await userService.createUserOnSuperset([user]);
   const { username, password } = userResponses[0].result;
-  return { 
+  return {
     email: subcountyRequest.email,
-    username, 
+    username,
     password,
   };
 }
@@ -113,7 +122,33 @@ function validateAccountRequests(subcountyAccountRequests: SubcountyAccountReque
   }
 }
 
-(async function() {
+// generate CSV of subcounty users
+function generateCSV(userResults: UserCreationResult[], filePath: string) {
+  const csv = userResults.map(user => {
+    return {
+      username: user.username,
+      password: user.password,
+      email: user.email
+    };
+  });
+
+  // Add headers and convert to CSV string
+  const headers = ['username', 'password', 'email'].join(',');
+  const csvRows = csv.map(row => Object.values(row).join(','));
+  const csvString = [headers, ...csvRows].join('\n');
+  const fileName = filePath.split('.')[0] + '-users.csv';
+
+  try {
+    // Write file synchronously to ensure it's written before continuing
+    fs.writeFileSync(fileName, csvString, 'utf8');
+    Logger.success(`CSV file created successfully at ${fileName}`);
+  } catch (err) {
+    Logger.error(`Failed to write CSV file: ${err}`);
+    throw err;
+  }
+}
+
+(async function () {
   const subcountyRequests = await readUsersFromFile<SubcountyAccountRequest>(CSV_FILENAME);
 
   validateAccountRequests(subcountyRequests);
@@ -128,4 +163,6 @@ function validateAccountRequests(subcountyAccountRequests: SubcountyAccountReque
   }
 
   console.table(userResults);
+  generateCSV(userResults, CSV_FILENAME);
+  process.exit(0);
 })();
