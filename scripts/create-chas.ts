@@ -101,14 +101,29 @@ async function createUsers(users: CHAUser[]): Promise<CreateUserResponse[]> {
     throw new Error("No roles found");
   }
   
-  const userPromises = users.map(user => prepareUserData(user, roles));
-  const preparedUsers = (await Promise.all(userPromises)).filter((user): user is User => user !== null);
+  const batchSize = 10;
+  const createdUsers: CreateUserResponse[] = [];
 
-  if (preparedUsers.length === 0) {
+  for (let i = 0; i < users.length; i += batchSize) {
+    const batch = users.slice(i, i + batchSize);
+    const userPromises = batch.map(user => prepareUserData(user, roles));
+    const preparedUsers = (await Promise.all(userPromises)).filter((user): user is User => user !== null);
+
+    if (preparedUsers.length > 0) {
+      const batchResults = await new UserService().createUserOnSuperset(preparedUsers);
+      createdUsers.push(...batchResults);
+    }
+
+    if (i + batchSize < users.length) {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay between batches
+    }
+  }
+
+  if (createdUsers.length === 0) {
     throw new Error("No valid users found");
   }
 
-  return new UserService().createUserOnSuperset(preparedUsers);
+  return createdUsers;
 }
 
 // create roles
