@@ -60,7 +60,7 @@ There are scripts on this repository that will help you do this automatically.
 
 ## Creating RLS policies
 
-The process is similar to the one above for creating roles. The `group key` and `clause` are the important bits here and should be configured accordingly. They determine what level of access the role will have. For example, the clause 'county_name' = '{{county_name}}' will allow the role to access data from the specified county. 
+The process is similar to the one above for creating roles. You can either create a RLS policy via the Superset UI or via the API.  The `group key` and `clause` are the important bits here and should be configured accordingly. They determine what level of access the role will have. For example, the clause 'county_name' = '{{county_name}}' will allow the role to access data from the specified county. 
 
 ## Creating Users
 
