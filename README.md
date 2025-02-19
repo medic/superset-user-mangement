@@ -47,7 +47,7 @@ We will be dealing with 3 main types of roles:
 - Sub-county
 - CHA
 
-Create these roles first, either through the UI or by making a `POST` request to the endpoint `/security/roles/` with the following JSON payload:
+Create these roles first, either through the Superset UI or by making a `POST` request to the endpoint `/security/roles/` with the following JSON payload:
 
 ```json
 {
