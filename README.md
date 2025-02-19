@@ -12,7 +12,7 @@ npm install
 
 # Usage
 
-It is recommended to run the application locally and test using a local Superset instance before working on the production instance.
+It is recommended to run the application locally and test using a local Superset instance before working on the production instance. You can find instructions for installing and running Superset from their [Docs](https://superset.apache.org/docs/quickstart/)
 A REST API is available at `{{superset_url}}/swagger/v1`. To access the security endpoints that allow you to manage roles, add the 
 following to your Superset config file `superset_config.py`:
 
