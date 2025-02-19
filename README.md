@@ -14,7 +14,7 @@ npm install
 
 It is recommended to run the application locally and test using a local Superset instance before working on the production instance.
 A REST API is available at `{{superset_url}}/swagger/v1`. To access the security endpoints that allow you to manage roles, add the 
-following to your Superset config file:
+following to your Superset config file `superset_config.py`:
 
 `FAB_ADD_SECURITY_API = True`
 
