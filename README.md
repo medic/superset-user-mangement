@@ -51,20 +51,56 @@ Create these roles first, either through the Superset UI or by making a `POST` r
 
 ```json
 {
-    "name": "role-name"
+    "name": "string"
 }
 ```
 
-Next, update the permissions for the roles. Subsequent roles for individual types will be copied off of these `base` roles. 
-There are scripts on this repository that will help you do this automatically. 
+A successful response will look like this:
+```json
+{
+  "id": "string",
+  "result": {
+    "name": "string"
+  }
+}
+```
+Use the `id` from the response to update the role permissions via a `POST` request to the endpoint `/security/roles/{role_id}/permissions/`. The payload should be a list of permission ids. 
+
+```json
+{
+  "permission_view_menu_ids": [
+    0
+  ]
+}
+```
+Subsequent roles for individual types will be copied off of these `base` roles. There are scripts on this repository that will help you do this automatically. 
 
 ## Creating RLS policies
 
-The process is similar to the one above for creating roles. You can either create a RLS policy via the Superset UI or via the API.  The `group key` and `clause` are the important bits here and should be configured accordingly. They determine what level of access the role will have. For example, the clause 'county_name' = '{{county_name}}' will allow the role to access data from the specified county. 
+The process is similar to the one above for creating roles. You can either create a RLS policy via the Superset UI or via the API.  The `group key` and `clause` are the important bits here and should be configured accordingly. They determine what level of access the role will have. For example, the clause 'county_name' = '{{county_name}}' will allow the role to access data from the specified county. To create a RLS policy via the API, use the following JSON payload format:
+
+```json
+{
+  "clause": "string",
+  "description": "string",
+  "filter_type": "Regular",
+  "group_key": "string",
+  "name": "string",
+  "roles": [
+    0
+  ],
+  "tables": [
+    0
+  ]
+}
+```
+to the `/rowlevelsecurity/` endpoint. 
+
+Updating RLS policies can be done either through the Superset UI or by making a `PUT` request to the endpoint `/rowlevelsecurity/` with a similar payload as above.
 
 ## Creating Users
 
-Users can be assigned multiple roles. This is key for CHAs who will need to have access to multiple CHUs. Users who are no longer active do not need to have access to any data and their accounts should be deactivated. Their roles can then be re-assigned to the new active users.
+Users can be assigned multiple roles. This is key for CHAs who will need to have access to multiple CHUs. Users who are no longer active do not need to have access to any data and their accounts should be deactivated. Their roles can then be re-assigned to the new active users. 
 
 
 ## Scripts
