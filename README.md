@@ -1,63 +1,139 @@
-# 🧰 Superset Bulk Users
+# Superset User Management
 
-> This is a MVP script for loading bulk users to Superset via the [API](https://superset.apache.org/docs/api/). It expects a csv file, see /src/template.csv for a sample.
+This project provides a set of functions to help you manage users, roles and permissions in Superset.
 
-#### How it works
-1. Requires an admin account to manage roles, RLS policies and users. 
-2. When working with the different entities, there are a few things to keep in mind:
-    - roles created have permissions allowing them access to desired datasources
-    - RLS policies are attached to roles and ensure role based access to the datasources
-    - users are assigned roles, and can be assigned multiple roles
-3. Different Superset roles, RLS policies and users can be created depending on the user roles e.g CHA, County User, Subcounty User, National 
-4. The API does not allow bulk upserts of roles, RLS policies and users. You will hit a rate limit if you make too many requests.  
+## Installation
 
-#### How to use it
-1. Populate your csv file, refer to the `./src/template.csv` for a sample
-2. Define your environment variables - make a copy of `.env.template` and rename to `.env`
-3. Install dependencies: run `npm i`
-
-#### Creating Roles
-Functions to create and manage roles are found in `./src/service/role-service.ts`. The process for creating roles is as follows:
-1. There are already a number of roles present on Superset. They can be fetched from the API using the `getRoles` function. This method will fetch roles from Redis or Superset and return them as an array of SupersetRole objects.
-2. You can use the `getRoleByName` function to fetch a specific role by name.
-3. You can use the `createRoles` function to create new roles on Superset. Only the name is required for this step. 
-4. You can use the `saveSupersetRoles` function to save the roles to Redis. This step is optional. Given the large number of roles present, it is recommended to save them to Redis for faster access as opposed to fetching them from Superset every time.
-5. Update the role's permissions using the `updateRolePermissions` function. This will update the permissions for the role on Superset and grant access to the datasources specified in the permissions array. The permissions array is a list of permission IDs for datasets. 
-6. Base Roles are defined for CHA and County. They can be fetched using the `fetchBaseRoles` function. The permissions for these can be used to update other roles. More base roles can be added as needed.
-7. Creating a new role should be a two step process. First create the role, then update the permissions. This is to ensure the permissions are applied to the role.
-
-#### Creating RLS Policies
-Functions to create and manage RLS policies are found in `./src/service/rls-service.ts`. The process for creating RLS policies is as follows:
-1. RLS policies can be fetched using the `fetchRLSPolicies` function. This function returns an array of RLS policies.
-2. RLS policies can be created using the `createRLSPolicy` function. This function requires a name, group_key, clause, description, filter_type, roles and tables.
-    - `Group key` defines the column used in filtering e.g `county_name`, `chu_code` etc. The column must exist in the table for the policy to work. 
-    - `Clause` is what is filled in the filter e.g `county_name='Nairobi'`
-    - `Roles` an array of role IDs that the policy should apply to. 
-    - `Tables` an array of table IDs where the policy applies.
-    - `Filter type` is always set to `Regular`. 
-3. Base RLS policies are defined for County and CHU. More can be added as needed. These can be used to easily create more policies. 
-4. RLS policy tables can be updated using the `updateRLSTables` function. In most cases, you will copy over the tables from the respective base RLS policy. 
+Clone the repository and install the dependencies:
+```bash
+npm install
+```
 
 
-#### Creating Users
-Functions to manage users are found in `./src/service/user-service.ts`. The steps for user creation are as follows:
-1. Create a user using the `createUserOnSuperset` function. This function requires a username, email, first name, last name, roles, and password. 
-    - `Roles` is an array of role IDs that the user be given. This determines their access level.
-    - `Password` is optional. It is recommended to use the existing passwords that users already have for eCHIS to prevent them from having too many passwords.
-2. There `create-chas-from-csv` script can be leveraged as a guide to create users from a CSV file. It does the following:
-    - Fetches and creates roles.
-    - Creates RLS policies.
-    - Creates users.
-    - Detects and skips duplicates (on Superset) for roles, users and RLS policies.
-    - User details missing usernames and passwords are auto-generated.
-    - Creates CSV file with user details.
+# Usage
 
-This script can be run multiple times without worry of duplicates.
+It is recommended to run the application locally and test using a local Superset instance before working on the production instance. You can find instructions for installing and running Superset from their [Docs](https://superset.apache.org/docs/quickstart/)
+A REST API is available at `{{superset_url}}/swagger/v1`. To access the security endpoints that allow you to manage roles, add the 
+following to your Superset config file `superset_config.py`:
 
-### Important Notes
-- Always test roles and RLS policies in a non-production environment first
-- Regularly audit user permissions and access levels
-- Back up existing configurations before making bulk changes
-- Monitor API rate limits when creating multiple entities
+`FAB_ADD_SECURITY_API = True`
+
+Restart the Superset container for the setting to take effect. You should now have access to the security endpoints.
+
+### Authentication
+
+An admin account is required to make any requests to the Superset API. The username and password can be configured in the .env file, along with the Superset URL. 
+
+`POST` and `PUT` requests require an additional header: `X-CSRFToken` which can be obtained by logging in to Superset, then visiting the `/security/csrf_token/` endpoint with the access token in the `Authorization` header.
+
+### Roles
+
+These define what datasets (tables) and permissions a user has access to. Roles are meant to be re-usable and can be re-assigned when users are moved between places. 
+
+### Row-level security
+
+These define what datasets and roles restrictions apply to. For example, a CHA role should have access to data from their CHU only. 
+As such, The RLS policy contains a clause e.g chu_code = `{{chu_code}}`. The query builder will replace this with the CHU code of the user and append it to the select query. The same applies to sub-county and county users. RLS policies only apply to roles.
+
+### Users
+
+Users are assigned roles which in turn have the requisite RLS policies attached. User accounts are to be deactivated by setting toggling the `active` status on the UI or setting `"active": false` in the payload.
 
 
+## Creating Roles
+
+We will be dealing with 3 main types of roles:
+- County
+- Sub-county
+- CHA
+
+Create these roles first, either through the Superset UI or by making a `POST` request to the endpoint `/security/roles/` with the following JSON payload:
+
+```json
+{
+    "name": "string"
+}
+```
+
+A successful response will look like this:
+```json
+{
+  "id": "string",
+  "result": {
+    "name": "string"
+  }
+}
+```
+Use the `id` from the response to update the role permissions via a `POST` request to the endpoint `/security/roles/{role_id}/permissions/`. The payload should be a list of permission ids. 
+
+```json
+{
+  "permission_view_menu_ids": [
+    0
+  ]
+}
+```
+Subsequent roles for individual types will be copied off of these `base` roles. There are scripts on this repository that will help you do this automatically. 
+
+## Creating RLS policies
+
+The process is similar to the one above for creating roles. You can either create a RLS policy via the Superset UI or via the API.  The `group key` and `clause` are the important bits here and should be configured accordingly. They determine what level of access the role will have. For example, the clause 'county_name' = '{{county_name}}' will allow the role to access data from the specified county. To create a RLS policy via the API, use the following JSON payload format:
+
+```json
+{
+  "clause": "string",
+  "description": "string",
+  "filter_type": "Regular",
+  "group_key": "string",
+  "name": "string",
+  "roles": [
+    0
+  ],
+  "tables": [
+    0
+  ]
+}
+```
+to the `/rowlevelsecurity/` endpoint. 
+
+Updating RLS policies can be done either through the Superset UI or by making a `PUT` request to the endpoint `/rowlevelsecurity/` with a similar payload as above.
+
+## Creating Users
+
+Users can be assigned multiple roles. This is key for CHAs who will need to have access to multiple CHUs. Users who are no longer active do not need to have access to any data and their accounts should be deactivated. Their roles can then be re-assigned to the new active users. 
+
+
+## Scripts
+
+The scripts are contained in the `scripts` folder. They can be modified or new one added to suit your needs. 
+
+- `create-chas.ts` creates CHA users from a CSV file. The required parameters are:
+    - `email`
+    - `first_name`
+    - `last_name`
+    - `chu`
+    - `password`
+    
+    If no password is provided, a random one will be generated. The username is generated from the first name and last name. A CSV file with the credentails created will be generated and stored in the `data` folder. 
+    
+    To run the script, use the following command:
+    ```bash
+    npx ts-node scripts/create-chas.ts <csv_file_path>
+    ```
+
+- `create-subcounty-users.ts` creates sub-county users from a CSV file. The required parameters are:
+    - `email`
+    - `subcounty`
+    - `county`
+    
+    Add a `subcounty-users.csv` to the `data` folder before running the script. It should have the following format:
+    ```csv
+    email,subcounty,county
+    ```
+
+    To run the script, use the following command:
+    ```bash
+    npx ts-node scripts/create-subcounty-users.ts
+    ```
+
+    A csv file with the credentails created will be generated and stored in the `data` folder.
