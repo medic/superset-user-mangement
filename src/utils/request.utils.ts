@@ -55,6 +55,7 @@ export async function handleRequest(url: string, options: RequestInit = {}) {
         'Cookie': headers.Cookie
       }
     });
+    Logger.info(`Calling ${url} with options ${JSON.stringify(options)}`);
     return handleResponse(response);
   } catch (error) {
     Logger.error(`Fetch error for ${url}: ${error}`);

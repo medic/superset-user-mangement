@@ -1,7 +1,6 @@
 import path from 'path';
 import { Logger } from '../src/utils/logger';
 import { generatePassword } from '../src/utils/password.utils';
-import { PermissionService } from '../src/service/permission-service';
 import { readUsersFromFile } from '../src/repository/csv-util';
 import { RoleService } from '../src/service/role-service';
 import { RLSService } from '../src/service/rls-service';
@@ -9,14 +8,17 @@ import { UpdateRLSRequest } from '../src/types/rls';
 import { User } from '../src/types/user';
 import { UserService } from '../src/service/user-service';
 import fs from 'fs';
+import { SupersetRole } from '../src/types/role';
+import { capitalizeWords } from '../src/utils/string.utils';
 
-const CSV_FILENAME = path.join(__dirname, '../data/subcounty-users.csv');
+const CSV_FILENAME = path.join(__dirname, '../data/narok_subcounty.csv');
 
-const BASE_SUBCOUNTY_ROLE_ID = 3585;
+const DASHBOARD_VIEWER_ROLE_ID = 6;
 
-type SubcountyAccountRequest = {
+export type SubcountyAccountRequest = {
+  name: string;
   county: string;
-  subcounty?: string;
+  subcounty: string;
   email: string;
 };
 
@@ -26,78 +28,89 @@ type UserCreationResult = {
   email: string;
 };
 
-async function getBasePermissions(): Promise<number[]> {
-  const permissionService = new PermissionService();
-  return await permissionService.getPermissionsByRoleId(BASE_SUBCOUNTY_ROLE_ID);
+async function getRole(roleName: string): Promise<SupersetRole | null> {
+  const roleService = new RoleService();
+  const roleList = await roleService.getRoleByName(roleName);
+  Logger.info(`Role ${roleName} found: ${roleList.result[0]?.id}`);
+  return roleList.result[0] || null;
 }
 
-function subcountyUsername(request: SubcountyAccountRequest): string {
-  const transform = (val: string) => val.toLowerCase().replace(/ /g, '_').trim();
+export function getSubcountyRole(subcounty: string): string {
+  const transform = (val: string) => val.toLowerCase().trim();
 
-  const subcountyName = request.subcounty?.split(' ');
+  const subcountyName = transform(subcounty);
 
-  if (!subcountyName || subcountyName.length > 1) {
-    return transform(request.subcounty!)
+  if (subcountyName.includes('subcounty')) {
+    return capitalizeWords(subcountyName);
   } else {
-    let result = `${transform(request.county)}`;
-    if (request.subcounty) {
-      result += `_${transform(request.subcounty)}`;
-    }
-    return result;
+    return capitalizeWords(`${subcountyName} Subcounty`);
   }
 }
 
-async function createRole(subcountyRequest: SubcountyAccountRequest): Promise<number> {
-  Logger.info('Creating role from base...');
-  const basePermissionIds = await getBasePermissions();
+async function createRole(subcounty: string): Promise<number> {
+  Logger.info(`Creating ${getSubcountyRole(subcounty)} role...`);
+
+  const role = await getRole(getSubcountyRole(subcounty));
+
+  if (role) {
+    return role.id;
+  }
+
   const roleService = new RoleService();
-  const roleName = `subcounty_${subcountyUsername(subcountyRequest)}`;
+  const roleName = getSubcountyRole(subcounty);
   const roles = await roleService.createRoles([roleName]);
-  await roleService.updateRolePermissions(roles, basePermissionIds);
   return roles[0].id;
 }
 
-function getRLSClause(subcountyRequest: SubcountyAccountRequest): string {
-  let clause = `county='${subcountyRequest.county}'`;
-  if (subcountyRequest.subcounty) {
-    clause += ` AND subcounty_name='${subcountyRequest.subcounty}'`;
-  }
+function getRLSClause(subcounty: string): string {  
+  const transform = (val: string) => val.toLowerCase().trim();
+  const subcountyName = transform(subcounty);
+  const key = capitalizeWords(subcountyName);
 
+  const clause = `sub_county_name='${key}'`;
   return clause;
 }
 
-async function createRLSPolicy(subcountyRequest: SubcountyAccountRequest, roleId: number) {
-  Logger.info('Creating an RLS...');
+async function createRLSPolicy(subcounty: string, roleId: number): Promise<number> {
   const rlsService = new RLSService();
-  const clause = getRLSClause(subcountyRequest);
+  const rls = await rlsService.getRLSByName(`${getSubcountyRole(subcounty)} RLS`);
+  if (rls) {
+    return rls.id;
+  }
 
-  const supervisorTables = await rlsService.fetchSupervisorTables();
+  const subcountyName = getSubcountyRole(subcounty);
+  Logger.info(`Creating ${subcountyName} RLS...`);
+
+  const clause = getRLSClause(subcounty);
+
+  const supervisorTables = await rlsService.fetchRLSTables(rlsService.BASE_COUNTY_RLS_ID);
 
   const rlsRequest: UpdateRLSRequest = {
-    name: `subcounty_${subcountyUsername(subcountyRequest)}`,
-    group_key: '',
+    name: `${subcountyName} RLS`,
+    group_key: 'sub_county_name',
     clause,
-    description: `RLS Policy for Subcounty ${subcountyRequest.county}.${subcountyRequest.subcounty || ''}`,
+    description: `RLS Policy for ${subcountyName}`,
     filter_type: 'Regular',
     roles: [roleId],
-    tables: [241, ...supervisorTables],
+    tables: [...supervisorTables],
   };
 
   const rlsResponse = await rlsService.createRLSPolicy(rlsRequest);
-  Logger.info(`Resulting RLS ID: ${rlsResponse.id}`);
+  Logger.info(`Created ${subcountyName} RLS with ID: ${rlsResponse.id}`);
+  return rlsResponse.id;
 }
 
 async function createUser(subcountyRequest: SubcountyAccountRequest, roleId: number): Promise<UserCreationResult> {
-  const subcountyName = subcountyRequest.subcounty?.split(' ');
+  const name = subcountyRequest.name.trim().toLowerCase().split(' ');
 
   const user: User = {
     active: true,
-    first_name: subcountyName?.[0] || subcountyRequest.subcounty || '',
-    last_name: subcountyName?.[1] || subcountyRequest.county,
+    first_name: name[0],
+    last_name: name[1] || '',
     email: subcountyRequest.email,
-    username: subcountyUsername(subcountyRequest),
+    username: subcountyRequest.name.trim().toLowerCase().replace(/ /g, ''),
     password: generatePassword(10),
-    roles: [roleId]
+    roles: [roleId, DASHBOARD_VIEWER_ROLE_ID]
   };
 
   const userService = new UserService();
@@ -112,8 +125,8 @@ async function createUser(subcountyRequest: SubcountyAccountRequest, roleId: num
 
 function validateAccountRequests(subcountyAccountRequests: SubcountyAccountRequest[]): void {
   for (const subcountyRequest of subcountyAccountRequests) {
-    if (!subcountyRequest.county?.trim()) {
-      throw Error(`County information is required`);
+    if (!subcountyRequest.subcounty?.trim()) {
+      throw Error(`Subcounty information is required`);
     }
 
     if (!subcountyRequest.email?.trim()) {
@@ -152,12 +165,17 @@ function generateCSV(userResults: UserCreationResult[], filePath: string) {
   const subcountyRequests = await readUsersFromFile<SubcountyAccountRequest>(CSV_FILENAME);
 
   validateAccountRequests(subcountyRequests);
-  
+
+
+
+  console.table(subcountyRequests);
+
   const userResults: UserCreationResult[] = [];
   for (const subcountyRequest of subcountyRequests) {
-    Logger.info(`Creating ${subcountyUsername(subcountyRequest)}:`);
-    const roleId = await createRole(subcountyRequest);
-    await createRLSPolicy(subcountyRequest, roleId);
+    const subcounty = subcountyRequest.subcounty;
+    Logger.info(`Creating ${subcounty} user:`);
+    const roleId = await createRole(subcounty);
+    await createRLSPolicy(subcounty, roleId);
     const userResult = await createUser(subcountyRequest, roleId);
     userResults.push(userResult);
   }

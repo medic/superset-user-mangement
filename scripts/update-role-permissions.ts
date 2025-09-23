@@ -18,5 +18,5 @@ async function updateRolePermissions(baseRoleId: number, roleToUpdate: number) {
   }
 }
 
-updateRolePermissions(3412, 3585).catch(error => Logger.error(error));
+updateRolePermissions(4, 6).catch(error => Logger.error(error));
 

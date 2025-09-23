@@ -8,12 +8,13 @@
 export function generateUsername(firstName: string, lastName: string): string {
   // Function to clean text and split into words
   const cleanText = (text: string): string[] => {
-    return text.toLowerCase()
-      .normalize('NFD')  // Decompose accented characters
-      .replace(/[\u0300-\u036f]/g, '')  // Remove diacritics
-      .replace(/[^a-z\s]/g, '')  // Remove everything except letters and spaces
-      .trim()  // Remove leading/trailing spaces
-      .split(/\s+/);  // Split into words
+    return text
+      .toLowerCase()
+      .normalize('NFD') // Decompose accented characters
+      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+      .replace(/[^a-z\s]/g, '') // Remove everything except letters and spaces
+      .trim() // Remove leading/trailing spaces
+      .split(/\s+/); // Split into words
   };
 
   // Combine and clean both names
@@ -26,3 +27,15 @@ export function generateUsername(firstName: string, lastName: string): string {
   // Create username by combining first and last words with underscore
   return `${firstWord}_${lastWord}`;
 }
+
+export function capitalizeFirstLetter(str: string): string {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
+export const capitalizeWords = (str: string) => {
+  return str
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};

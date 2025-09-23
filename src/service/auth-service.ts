@@ -52,6 +52,8 @@ export class AuthService {
         refresh: true
       };
 
+      Logger.info('Logging in with credentials ' + JSON.stringify(body));
+
       const url = `${API_URL()}/security/login`;
       const response = await fetch(url, {
         method: 'POST',

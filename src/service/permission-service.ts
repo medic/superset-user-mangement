@@ -1,5 +1,4 @@
 import { PermissionList, PermissionIds, UpdatePermissionResult, Permission } from '../types/permission';
-import { AuthService } from './auth-service';
 import { RedisService } from '../repository/redis-util';
 import { Logger } from '../utils/logger';
 import { API_URL, handleRequest } from '../utils/request.utils';
@@ -8,7 +7,7 @@ import { API_URL, handleRequest } from '../utils/request.utils';
  * Class to manage permissions for roles on Superset
  */
 export class PermissionService {
-  private readonly DEFAULT_ROLE: number = 3051;
+  private readonly DEFAULT_ROLE: number = 3412;
 
   constructor() {}
 

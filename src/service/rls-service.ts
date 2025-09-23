@@ -19,8 +19,8 @@ import { RlsRepository } from "../repository/rls-repository";
  */
 export class RLSService {
 
-  readonly BASE_COUNTY_RLS_ID = 3051;
-  readonly BASE_CHU_RLS_ID = 3052;
+  readonly BASE_COUNTY_RLS_ID = 3;
+  readonly BASE_CHU_RLS_ID = -1;
 
   constructor(private readonly authService: AuthService = AuthService.getInstance()) { }
 
@@ -129,13 +129,6 @@ export class RLSService {
    */
   async fetchBaseCountyTables(): Promise<number[]> {
     return this.fetchRLSTables(this.BASE_COUNTY_RLS_ID);
-  }
-
-  /**
-   * Fetch supervisor tables. Alls CHAs and subcounty users need access to these tables
-   */
-  async fetchSupervisorTables(): Promise<number[]> {
-    return this.fetchRLSTables(this.BASE_CHU_RLS_ID);
   }
 
   /**

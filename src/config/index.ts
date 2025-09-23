@@ -9,7 +9,7 @@
  */
 
 import * as dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ override: true });
 
 export const SUPERSET = {
   username: getEnvironmentVariable('SUPERSET_USERNAME', 'admin'),
