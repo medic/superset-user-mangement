@@ -4,14 +4,14 @@ import { generatePassword } from '../src/utils/password.utils';
 import { readUsersFromFile } from '../src/repository/csv-util';
 import { RoleService } from '../src/service/role-service';
 import { RLSService } from '../src/service/rls-service';
-import { UpdateRLSRequest } from '../src/types/rls';
-import { User } from '../src/types/user';
+import { UpdateRLSRequest } from "../src/types";
+import { User } from "../src/types";
 import { UserService } from '../src/service/user-service';
 import fs from 'fs';
-import { SupersetRole } from '../src/types/role';
+import { SupersetRole } from "../src/types";
 import { capitalizeWords } from '../src/utils/string.utils';
 
-const CSV_FILENAME = path.join(__dirname, '../data/narok_subcounty.csv');
+const CSV_FILENAME = path.join(__dirname, '../data/wajir.csv');
 
 const DASHBOARD_VIEWER_ROLE_ID = 6;
 
@@ -125,6 +125,8 @@ async function createUser(subcountyRequest: SubcountyAccountRequest, roleId: num
 
 function validateAccountRequests(subcountyAccountRequests: SubcountyAccountRequest[]): void {
   for (const subcountyRequest of subcountyAccountRequests) {
+    console.log(subcountyRequest)
+
     if (!subcountyRequest.subcounty?.trim()) {
       throw Error(`Subcounty information is required`);
     }
@@ -165,8 +167,6 @@ function generateCSV(userResults: UserCreationResult[], filePath: string) {
   const subcountyRequests = await readUsersFromFile<SubcountyAccountRequest>(CSV_FILENAME);
 
   validateAccountRequests(subcountyRequests);
-
-
 
   console.table(subcountyRequests);
 

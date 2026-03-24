@@ -8,12 +8,12 @@
  */
 
 import path from "path";
-import { RowLevelSecurity } from "../src/types/rls";
+import { RowLevelSecurity } from "../src/types";
 import { RLSService } from "../src/service/rls-service";
-import { User } from "../src/types/user";
+import { User } from "../src/types";
 import { UserService } from "../src/service/user-service";
 import { RoleService } from "../src/service/role-service";
-import { RoleList, SupersetRole } from "../src/types/role";
+import { RoleList, SupersetRole } from "../src/types";
 import { readUsersFromFile } from "../src/repository/csv-util";
 import { Logger } from "../src/utils/logger";
 import fs from 'fs';

@@ -7,3 +7,6 @@ logs
 .DS_Store
 build
 data
+.metaswarm
+.qodo
+.claude
